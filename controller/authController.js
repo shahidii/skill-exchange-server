@@ -5,9 +5,14 @@ const authService = require("../service/authService");
 // @route   POST /api/auth/signup
 // @access  Public
 exports.signup = asyncHandler(async (req, res) => {
-    const { fullName, email, password , mobileNumber , skillsHave , skillsNeed } = req.body;
-    const result = await authService.signup({fullName, email, password , mobileNumber , skillsHave , skillsNeed});
-    res.status(201).json(result);
+    const { fullName, email, password, mobileNumber, skillsHave, skillsNeed } = req.body;
+    const { user } = await authService.signup({ fullName, email, password, mobileNumber, skillsHave, skillsNeed });
+    
+    res.status(201).json({
+        success: true,
+        message: 'Account created successfully',
+        data: { user }
+    });
 });
 
 // @desc    Login a user
@@ -15,6 +20,11 @@ exports.signup = asyncHandler(async (req, res) => {
 // @access  Public
 exports.login = asyncHandler(async (req, res) => {
     const { email, password } = req.body;
-    const result = await authService.login({email, password});
-    res.status(200).json(result);
+    const { user, token } = await authService.login({ email, password });
+    
+    res.status(200).json({
+        success: true,
+        message: 'User logged in successfully',
+        data: { user, token }
+    });
 });

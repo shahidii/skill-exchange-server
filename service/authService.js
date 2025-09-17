@@ -10,20 +10,40 @@ exports.signup = async (body) => {
         const existingEmail = await authRepository.findUserByEmail(email);
         const existingMobileNumber = await authRepository.findUserByMobileNumber(mobileNumber);
         if (existingEmail) {
-            return { message: "User with this email already exists" };
+            const error = new Error('Email already registered');
+            error.code = 'EMAIL_EXISTS';
+            error.field = 'email';
+            error.statusCode = 400;
+            throw error;
         }
         if (existingMobileNumber) {
-            return { message: "User with this mobile number already exists" };
+            const error = new Error('Mobile number already registered');
+            error.code = 'NUMBER_EXISTS';
+            error.field = 'mobileNumber'; 
+            error.statusCode = 400;
+            throw error;
         }
         // Checking SkillsHave array and skillsNeed array elements is unique & not same 
         if (skillsHave.length !== new Set(skillsHave).size) {
-            return { message: "SkillsHave array contains duplicate elements" };
+            const error = new Error('SkillsHave array contains duplicate elements');
+            error.code = 'SKILLS_HAVE_DUPLICATE';
+            error.field = 'skillsHave';
+            error.statusCode = 400;
+            throw error;
         }
         if (skillsNeed.length !== new Set(skillsNeed).size) {
-            return { message: "SkillsNeed array contains duplicate elements" };
+            const error = new Error('SkillsNeed array contains duplicate elements');
+            error.code = 'SKILLS_NEED_DUPLICATE';
+            error.field = 'skillsNeed';
+            error.statusCode = 400;
+            throw error;
         }
         if (skillsHave.some(skill => skillsNeed.includes(skill))) {
-            return { message: "SkillsHave and SkillsNeed arrays contain common elements" };
+            const error = new Error('SkillsHave and SkillsNeed arrays contain common elements');
+            error.code = 'SKILLS_HAVE_AND_NEED_COMMON';
+            error.field = 'skillsHave';
+            error.statusCode = 400;
+            throw error;
         }
         const hashedPassword = await bcrypt.hash(password, 10);
         // check the skills already exists in database , if exists that skill not save in skill database , rather take that skill id , and store in user database
@@ -47,7 +67,8 @@ exports.signup = async (body) => {
         const skillsHaveIds = await getSkillIds(skillsHave, authRepository);
         const skillsNeedIds = await getSkillIds(skillsNeed, authRepository);
 
-        const user = await authRepository.createUser({ fullName, email, password: hashedPassword, mobileNumber, skillsHave: skillsHaveIds, skillsNeed: skillsNeedIds });
+        await authRepository.createUser({ fullName, email, password: hashedPassword, mobileNumber, skillsHave: skillsHaveIds, skillsNeed: skillsNeedIds });
+        const user = await authRepository.findUserByEmail(email);
         return { user };
     } catch (error) {
         throw error;
@@ -60,11 +81,15 @@ exports.login = async (body) => {
         const { email, password } = body;
         const user = await authRepository.findUserByEmail(email);
         if (!user) {
-            return { message: "User not found" };
+            const error = new Error('User not found');
+            error.statusCode = 404;
+            throw error;
         }
         const isMatch = await bcrypt.compare(password, user.password);
         if (!isMatch) {
-            return { message: "Invalid password" };
+            const error = new Error('Invalid password');
+            error.statusCode = 401;
+            throw error;
         }
         const token = generateToken(user);
         return { user, token };
