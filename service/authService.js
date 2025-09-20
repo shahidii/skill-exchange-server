@@ -1,6 +1,8 @@
 const { generateToken } = require("../utility/jwt");
 const bcrypt = require("bcrypt");
 const authRepository = require("../repository/authRepository");
+const { formatUser } = require("../utility/formatUser")
+
 
 // Register a new user
 exports.signup = async (body) => {
@@ -19,7 +21,7 @@ exports.signup = async (body) => {
         if (existingMobileNumber) {
             const error = new Error('Mobile number already registered');
             error.code = 'NUMBER_EXISTS';
-            error.field = 'mobileNumber'; 
+            error.field = 'mobileNumber';
             error.statusCode = 400;
             throw error;
         }
@@ -69,7 +71,7 @@ exports.signup = async (body) => {
 
         await authRepository.createUser({ fullName, email, password: hashedPassword, mobileNumber, skillsHave: skillsHaveIds, skillsNeed: skillsNeedIds });
         const user = await authRepository.findUserByEmail(email);
-        return { user };
+        return { user: formatUser(user) };
     } catch (error) {
         throw error;
     }
@@ -81,18 +83,20 @@ exports.login = async (body) => {
         const { email, password } = body;
         const user = await authRepository.findUserByEmail(email);
         if (!user) {
-            const error = new Error('User not found');
-            error.statusCode = 404;
+            const error = new Error('Invalid email or password');
+            error.code = 'INVALID_CREDENTIALS'
+            error.statusCode = 401;
             throw error;
         }
         const isMatch = await bcrypt.compare(password, user.password);
         if (!isMatch) {
-            const error = new Error('Invalid password');
+            const error = new Error('Invalid email or password');
+            error.code = 'INVALID_CREDENTIALS'
             error.statusCode = 401;
             throw error;
         }
         const token = generateToken(user);
-        return { user, token };
+        return { user: formatUser(user), token };
     } catch (error) {
         throw error;
     }
