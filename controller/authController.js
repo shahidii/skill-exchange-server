@@ -28,3 +28,41 @@ exports.login = asyncHandler(async (req, res) => {
         data: { user, token }
     });
 });
+
+// @desc    Initiate reset password: validate credentials, send OTP
+// @route   POST /api/auth/reset-password
+// @access  Public
+exports.resetPassword = asyncHandler(async (req, res) => {
+    const { email, newPassword } = req.body;
+    const { maskedEmail, otpTtlSeconds } = await authService.resetPassword({ email, newPassword });
+    res.status(200).json({
+        success: true,
+        message: `6 digit OTP shared to ${maskedEmail}`,
+        data: { email, ttlSeconds: otpTtlSeconds }
+    });
+});
+
+// @desc    Resend OTP to the same email
+// @route   POST /api/auth/resend-otp
+// @access  Public
+exports.resendOtp = asyncHandler(async (req, res) => {
+    const { email } = req.body;
+    const { maskedEmail, otpTtlSeconds } = await authService.resendOtp({ email });
+    res.status(200).json({
+        success: true,
+        message: `New OTP sent to ${maskedEmail}`,
+        data: { email, ttlSeconds: otpTtlSeconds }
+    });
+});
+
+// @desc    Verify OTP and finalize password reset
+// @route   POST /api/auth/verify-otp
+// @access  Public
+exports.verifyOtp = asyncHandler(async (req, res) => {
+    const { email, otp } = req.body;
+    await authService.verifyOtp({ email, otp });
+    res.status(200).json({
+        success: true,
+        message: 'Password reset successful! Please log in'
+    });
+});

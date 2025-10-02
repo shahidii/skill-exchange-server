@@ -19,7 +19,7 @@ app.use("/api/auth", require("./routes/authRoutes")); // Authentication routes
 
 // Default route
 app.get("/", (req, res) => {
-    res.json({ message: "Welcome to the Skill Exchange API!" });
+    res.json({ message: "Welcome to the Skill Swap API!" });
 });
 
 // Error handling middleware

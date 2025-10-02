@@ -7,5 +7,6 @@ const findUserByMobileNumber = (mobileNumber) => User.findOne({ mobileNumber }).
 const findUserById = (id) => User.findById(id).populate("skillsHave skillsNeed");
 const findSkillsByName = (name) => Skill.findOne({ name });
 const createSkill = (skill) => Skill.create(skill);
+const updateUserPasswordByEmail = (email, hashedPassword) => User.updateOne({ email }, { $set: { password: hashedPassword } });
 
-module.exports = { createUser , findUserByEmail , findUserByMobileNumber , findUserById , findSkillsByName , createSkill };
+module.exports = { createUser , findUserByEmail , findUserByMobileNumber , findUserById , findSkillsByName , createSkill , updateUserPasswordByEmail };
