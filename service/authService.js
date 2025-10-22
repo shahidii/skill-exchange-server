@@ -1,7 +1,7 @@
 const { generateToken } = require("../utility/jwt");
 const bcrypt = require("bcrypt");
 const authRepository = require("../repository/authRepository");
-const { formatUser } = require("../utility/formatUser")
+const { formatUser, formatProfile } = require("../utility/formatUser")
 const { sendOtpEmail } = require("../utility/mailer");
 const { setJsonWithTtl, getJson, delKey } = require("../utility/redis");
 
@@ -11,7 +11,7 @@ const DEFAULT_OTP_TTL_SECONDS = 180; // Always 3 minutes as requested
 function generateSixDigitOtp() {
     return Math.floor(100000 + Math.random() * 900000).toString();
 }
-
+311965
 function maskEmail(email) {
     if (!email || !email.includes('@')) return email;
     const [user, domain] = email.split('@');
@@ -19,11 +19,29 @@ function maskEmail(email) {
     return `${maskedUser}@${domain}`;
 }
 
+// Clean text helper
+function cleanText(text) {
+    return (text ?? '').replace(/^\s+|\s+$/g, '').replace(/\s+/g, ' ');
+}
+
+// Reusable helper: map skill names (expected cleaned) to skill IDs, creating missing skills
+async function getSkillIds(skills) {
+    return Promise.all(
+        skills.map(async (skillName) => {
+            let skill = await authRepository.findSkillsByName(skillName);
+            if (!skill) {
+                skill = await authRepository.createSkill({ name: skillName });
+            }
+            return skill._id;
+        })
+    );
+}
+
 // Register a new user
 exports.signup = async (body) => {
     try {
 
-        const { fullName, email, password, mobileNumber, skillsHave, skillsNeed } = body;
+        const { fullName, email, password, mobileNumber, skillsOffered, skillsNeeded } = body;
         const existingEmail = await authRepository.findUserByEmail(email);
         const existingMobileNumber = await authRepository.findUserByMobileNumber(mobileNumber);
         if (existingEmail) {
@@ -40,25 +58,25 @@ exports.signup = async (body) => {
             error.statusCode = 400;
             throw error;
         }
-        // Checking SkillsHave array and skillsNeed array elements is unique & not same 
-        if (skillsHave.length !== new Set(skillsHave).size) {
-            const error = new Error('SkillsHave array contains duplicate elements');
+        // Checking skillsOffered array and skillsNeeded array elements is unique & not same 
+        if (skillsOffered.length !== new Set(skillsOffered).size) {
+            const error = new Error('skillsOffered array contains duplicate elements');
             error.code = 'SKILLS_HAVE_DUPLICATE';
-            error.field = 'skillsHave';
+            error.field = 'skillsOffered';
             error.statusCode = 400;
             throw error;
         }
-        if (skillsNeed.length !== new Set(skillsNeed).size) {
-            const error = new Error('SkillsNeed array contains duplicate elements');
+        if (skillsNeeded.length !== new Set(skillsNeeded).size) {
+            const error = new Error('skillsNeeded array contains duplicate elements');
             error.code = 'SKILLS_NEED_DUPLICATE';
-            error.field = 'skillsNeed';
+            error.field = 'skillsNeeded';
             error.statusCode = 400;
             throw error;
         }
-        if (skillsHave.some(skill => skillsNeed.includes(skill))) {
-            const error = new Error('SkillsHave and SkillsNeed arrays contain common elements');
+        if (skillsOffered.some(skill => skillsNeeded.includes(skill))) {
+            const error = new Error('skillsOffered and skillsNeeded arrays contain common elements');
             error.code = 'SKILLS_HAVE_AND_NEED_COMMON';
-            error.field = 'skillsHave';
+            error.field = 'skillsOffered';
             error.statusCode = 400;
             throw error;
         }
@@ -66,22 +84,10 @@ exports.signup = async (body) => {
         // check the skills already exists in database , if exists that skill not save in skill database , rather take that skill id , and store in user database
         // if that skill not exists in database , then save that skill in skill database , and take that skill id , and store in user database
 
-        async function getSkillIds(skills, authRepository) {
-            return Promise.all(
-                skills.map(async (skillName) => {
-                    let skill = await authRepository.findSkillsByName(skillName);
-                    if (!skill) {
-                        skill = await authRepository.createSkill({ name: skillName });
-                    }
-                    return skill._id;
-                })
-            );
-        }
+        const skillsOfferedIds = await getSkillIds(skillsOffered);
+        const skillsNeededIds = await getSkillIds(skillsNeeded);
 
-        const skillsHaveIds = await getSkillIds(skillsHave, authRepository);
-        const skillsNeedIds = await getSkillIds(skillsNeed, authRepository);
-
-        await authRepository.createUser({ fullName, email, password: hashedPassword, mobileNumber, skillsHave: skillsHaveIds, skillsNeed: skillsNeedIds });
+        await authRepository.createUser({ fullName, email, password: hashedPassword, mobileNumber, skillsOffered: skillsOfferedIds, skillsNeeded: skillsNeededIds });
         const user = await authRepository.findUserByEmail(email);
         return { user: formatUser(user) };
     } catch (error) {
@@ -141,7 +147,7 @@ exports.resetPassword = async ({ email, newPassword }) => {
         const otp = generateSixDigitOtp();
         const ttlSeconds = DEFAULT_OTP_TTL_SECONDS;
         // Save to Redis with TTL
-        await setJsonWithTtl(`otp:${email}`, { otp, hashedNewPassword }, ttlSeconds);
+        await setJsonWithTtl(`otp:${email}`, { otp, hashedNewPassword, type: 'reset_password' }, ttlSeconds);
         await sendOtpEmail({ to: email, otp, ttlSeconds });
 
         return { maskedEmail: maskEmail(email), otpTtlSeconds: ttlSeconds };
@@ -177,39 +183,402 @@ exports.resendOtp = async ({ email }) => {
     }
 };
 
-// Verify OTP and finalize password reset (read + delete from Redis)
+// Verify OTP and finalize reset password or update email (read + delete from Redis)
 exports.verifyOtp = async ({ email, otp }) => {
     try {
-        if (!email) {
+      if (!email || !otp) {
+        const error = new Error('Email and OTP are required');
+        error.code = 'VALIDATION_ERROR';
+        error.statusCode = 400;
+        throw error;
+      }
+  
+      const ctx = await getJson(`otp:${email}`);
+      if (!ctx || ctx.otp !== otp) {
+        const error = new Error('Please enter a valid 6-digit OTP');
+        error.code = 'OTP_INVALID';
+        error.statusCode = 400;
+        throw error;
+      }
+  
+      // OTP is valid; now check type Update Password or Update Email
+      if (ctx.type === 'reset_password') {
+        if (!ctx.hashedNewPassword) {
+          const error = new Error('Missing password reset context');
+          error.code = 'RESET_CONTEXT_MISSING';
+          error.statusCode = 400;
+          throw error;
+        }
+        await authRepository.updateUserPasswordByEmail(email, ctx.hashedNewPassword);
+      }
+  
+      else if (ctx.type === 'update_email') {
+        if (!ctx.newEmail) {
+          const error = new Error('Missing email update context');
+          error.code = 'UPDATE_EMAIL_CONTEXT_MISSING';
+          error.statusCode = 400;
+          throw error;
+        }
+        await authRepository.updateUserEmail(email, ctx.newEmail);
+      }
+  
+      else {
+        const error = new Error('Unknown OTP context');
+        error.code = 'UNKNOWN_OTP_CONTEXT';
+        error.statusCode = 400;
+        throw error;
+      }
+  
+      // Cleanup
+      await delKey(`otp:${email}`);
+  
+      return true;
+    } catch (error) {
+      throw error;
+    }
+  };
+  
+
+// Update user email
+exports.updateEmail = async ({ currentEmail, newEmail }) => {
+    try {
+        if (!currentEmail || !newEmail) {
             const error = new Error('Email is required');
             error.code = 'VALIDATION_ERROR';
             error.statusCode = 400;
             throw error;
         }
-        if (!otp) {
-            const error = new Error('OTP is required');
+        const user = await authRepository.findUserByEmail(currentEmail);
+        if (!user) {
+            const error = new Error('User not found');
+            error.code = 'INVALID_CREDENTIALS';
+            error.statusCode = 401;
+            throw error;
+        }
+        const existingUser = await authRepository.findUserByEmail(newEmail);
+        if (existingUser) {
+            const error = new Error('This Email is already in use');
+            error.code = 'EMAIL_EXISTS';
+            error.statusCode = 400;
+            throw error;
+        }
+        // Send Otp
+        const otp = generateSixDigitOtp();
+        const ttlSeconds = DEFAULT_OTP_TTL_SECONDS;
+        await setJsonWithTtl(`otp:${currentEmail}`, { otp, newEmail, type: 'update_email' }, ttlSeconds);
+        await sendOtpEmail({ to: currentEmail, otp, ttlSeconds });
+        return { maskedEmail: maskEmail(currentEmail), otpTtlSeconds: ttlSeconds };
+    } catch (error) {
+        throw error;
+    }
+};
+
+// Get user profile
+exports.getProfile = async (userId) => {
+    try {
+        const user = await authRepository.findUserById(userId);
+        if (!user) {
+            const error = new Error('User not found');
+            error.code = 'INVALID_CREDENTIALS';
+            error.statusCode = 401;
+            throw error;
+        }
+        return { user: formatProfile(user) };
+    } catch (error) {
+        throw error;
+    }
+};
+
+// Update profile (partial). Only fields provided in `body` will be validated and updated
+exports.updateProfile = async (userId, body) => {
+    try {
+        const allowedTextFields = ['fullName', 'bio', 'location'];
+        const update = {};
+        const updatedFields = {};
+
+        // Clean and validate text fields
+        for (const field of allowedTextFields) {
+            if (body[field] !== undefined) {
+                const value = cleanText(body[field]);
+                if (!value) {
+                    const error = new Error(`${field} is required`);
+                    error.code = 'VALIDATION_ERROR';
+                    error.field = field;
+                    error.statusCode = 400;
+                    throw error;
+                }
+                update[field] = value;
+                updatedFields[field] = true;
+            }
+        }
+
+        // Handle skills if provided
+        const { skillsOffered, skillsNeeded } = body;
+
+        if (skillsOffered || skillsNeeded) {
+            // Validate arrays
+            if (skillsOffered && !Array.isArray(skillsOffered)) {
+                const error = new Error('skillsOffered must be an array');
+                error.code = 'VALIDATION_ERROR';
+                error.field = 'skillsOffered';
+                error.statusCode = 400;
+                throw error;
+            }
+            if (skillsNeeded && !Array.isArray(skillsNeeded)) {
+                const error = new Error('skillsNeeded must be an array');
+                error.code = 'VALIDATION_ERROR';
+                error.field = 'skillsNeeded';
+                error.statusCode = 400;
+                throw error;
+            }
+
+            const cleanOffered = (skillsOffered || []).map(s => cleanText(s)).filter(Boolean);
+            const cleanNeeded = (skillsNeeded || []).map(s => cleanText(s)).filter(Boolean);
+
+            if (cleanOffered.length !== new Set(cleanOffered).size) {
+                const error = new Error('skillsOffered array contains duplicate elements');
+                error.code = 'SKILLS_HAVE_DUPLICATE';
+                error.field = 'skillsOffered';
+                error.statusCode = 400;
+                throw error;
+            }
+
+            if (cleanNeeded.length !== new Set(cleanNeeded).size) {
+                const error = new Error('skillsNeeded array contains duplicate elements');
+                error.code = 'SKILLS_NEED_DUPLICATE';
+                error.field = 'skillsNeeded';
+                error.statusCode = 400;
+                throw error;
+            }
+
+            if (cleanOffered.some(skill => cleanNeeded.includes(skill))) {
+                const error = new Error('skillsOffered and skillsNeeded arrays contain common elements');
+                error.code = 'SKILLS_HAVE_AND_NEED_COMMON';
+                error.field = 'skillsOffered';
+                error.statusCode = 400;
+                throw error;
+            }
+
+            if (skillsOffered) {
+                const skillsOfferedIds = await getSkillIds(cleanOffered);
+                update.skillsOffered = skillsOfferedIds;
+                updatedFields.skillsOffered = true;
+            }
+
+            if (skillsNeeded) {
+                const skillsNeededIds = await getSkillIds(cleanNeeded);
+                update.skillsNeeded = skillsNeededIds;
+                updatedFields.skillsNeeded = true;
+            }
+        }
+
+        if (Object.keys(update).length === 0) {
+            const error = new Error('No valid fields to update');
+            error.code = 'NO_UPDATE_FIELDS';
+            error.statusCode = 400;
+            throw error;
+        }
+
+        const updatedUser = await authRepository.updateUserById(userId, update);
+        if (!updatedUser) {
+            const error = new Error('User not found');
+            error.code = 'USER_NOT_FOUND';
+            error.statusCode = 404;
+            throw error;
+        }
+
+        return { user: formatProfile(updatedUser), updatedFields };
+    } catch (error) {
+        throw error;
+    }
+};
+
+
+// Update contact (partial). Accepts body like:
+// { mobileNumber, contact: { businessEmail, linkedIn, instagram, links } }
+exports.updateContact = async (userId, body) => {
+    try {
+        const phoneRegex = /^(?:\+91)?[2-9]\d{9}$/;
+        const urlRegex = /^(https?:\/\/)?([\w-]+\.)+[\w-]+(\/[-\w-.\/?:%&=]*)?$/i;
+
+        const update = {};
+        const updatedFields = {};
+
+        if (!body || (Object.keys(body).length === 0)) {
+            const error = new Error('No contact fields provided');
             error.code = 'VALIDATION_ERROR';
             error.statusCode = 400;
             throw error;
         }
-        const ctx = await getJson(`otp:${email}`);
-        if (!ctx) {
-            const error = new Error('Please enter a valid 6-digit OTP');
-            error.code = 'OTP_INVALID';
+
+        // mobileNumber may be top-level
+        if (body.mobileNumber !== undefined) {
+            if (typeof body.mobileNumber !== 'string') {
+                const error = new Error('mobileNumber must be a string');
+                error.code = 'VALIDATION_ERROR';
+                error.field = 'mobileNumber';
+                error.statusCode = 400;
+                throw error;
+            }
+            const cleaned = cleanText(body.mobileNumber);
+            if (!cleaned || !phoneRegex.test(cleaned)) {
+                const error = new Error('Invalid mobile number format');
+                error.code = 'INVALID_MOBILE';
+                error.field = 'mobileNumber';
+                error.statusCode = 400;
+                throw error;
+            }
+            update.mobileNumber = cleaned;
+            updatedFields.mobileNumber = cleaned;
+        }
+
+        // contact may be nested under body.contact or body.contact fields may be passed directly
+        const contactSource = (body.contact && typeof body.contact === 'object') ? body.contact : body;
+
+        // businessEmail / businessEmail (accept either key from client but store as businessEmail in DB)
+        const rawBusinessEmail = contactSource.businessEmail ?? contactSource.businessEmail;
+        if (rawBusinessEmail !== undefined) {
+            if (typeof rawBusinessEmail !== 'string') {
+                const error = new Error('businessEmail must be a string');
+                error.code = 'VALIDATION_ERROR';
+                error.field = 'businessEmail';
+                error.statusCode = 400;
+                throw error;
+            }
+            const cleaned = cleanText(rawBusinessEmail);
+            if (!cleaned) {
+                const error = new Error('businessEmail is required');
+                error.code = 'VALIDATION_ERROR';
+                error.field = 'businessEmail';
+                error.statusCode = 400;
+                throw error;
+            }
+            update['contact.businessEmail'] = cleaned; // note schema uses 'businessEmail'
+            updatedFields.businessEmail = cleaned;
+        }
+
+        // linkedIn (accept linkedIn or linkedIn) -> store as contact.linkedIn
+        const rawlinkedIn = contactSource.linkedIn ?? contactSource.linkedIn;
+        if (rawlinkedIn !== undefined) {
+            if (typeof rawlinkedIn !== 'string') {
+                const error = new Error('linkedIn must be a string');
+                error.code = 'VALIDATION_ERROR';
+                error.field = 'linkedIn';
+                error.statusCode = 400;
+                throw error;
+            }
+            const cleaned = cleanText(rawlinkedIn);
+            if (!cleaned) {
+                const error = new Error('linkedIn is required');
+                error.code = 'VALIDATION_ERROR';
+                error.field = 'linkedIn';
+                error.statusCode = 400;
+                throw error;
+            }
+            if (!urlRegex.test(cleaned)) {
+                const error = new Error('linkedIn must be a valid URL');
+                error.code = 'VALIDATION_ERROR';
+                error.field = 'linkedIn';
+                error.statusCode = 400;
+                throw error;
+            }
+            update['contact.linkedIn'] = cleaned;
+            updatedFields.linkedIn = cleaned;
+        }
+
+        // Instagram
+        if (contactSource.instagram !== undefined) {
+            if (typeof contactSource.instagram !== 'string') {
+                const error = new Error('instagram must be a string');
+                error.code = 'VALIDATION_ERROR';
+                error.field = 'instagram';
+                error.statusCode = 400;
+                throw error;
+            }
+            const cleaned = cleanText(contactSource.instagram);
+            if (!cleaned) {
+                const error = new Error('instagram is required');
+                error.code = 'VALIDATION_ERROR';
+                error.field = 'instagram';
+                error.statusCode = 400;
+                throw error;
+            }
+            if (!urlRegex.test(cleaned)) {
+                const error = new Error('instagram must be a valid URL');
+                error.code = 'VALIDATION_ERROR';
+                error.field = 'instagram';
+                error.statusCode = 400;
+                throw error;
+            }
+            update['contact.instagram'] = cleaned;
+            updatedFields.instagram = cleaned;
+        }
+
+        // Links array
+        if (contactSource.links !== undefined) {
+            if (!Array.isArray(contactSource.links)) {
+                const error = new Error('links must be an array');
+                error.code = 'VALIDATION_ERROR';
+                error.field = 'links';
+                error.statusCode = 400;
+                throw error;
+            }
+
+            const cleanedLinks = contactSource.links.map((l, idx) => {
+                if (!l || typeof l !== 'object') {
+                    const error = new Error(`links[${idx}] must be an object with name and url`);
+                    error.code = 'VALIDATION_ERROR';
+                    error.field = 'links';
+                    error.statusCode = 400;
+                    throw error;
+                }
+                const name = cleanText(l.name);
+                const url = cleanText(l.url);
+                if (!name) {
+                    const error = new Error(`links[${idx}].name is required`);
+                    error.code = 'VALIDATION_ERROR';
+                    error.field = 'links';
+                    error.statusCode = 400;
+                    throw error;
+                }
+                if (!url) {
+                    const error = new Error(`links[${idx}].url is required`);
+                    error.code = 'VALIDATION_ERROR';
+                    error.field = 'links';
+                    error.statusCode = 400;
+                    throw error;
+                }
+                if (!urlRegex.test(url)) {
+                    const error = new Error(`links[${idx}].url is not a valid URL`);
+                    error.code = 'VALIDATION_ERROR';
+                    error.field = 'links';
+                    error.statusCode = 400;
+                    throw error;
+                }
+                return { name, url };
+            });
+
+            update['contact.links'] = cleanedLinks;
+            updatedFields.links = cleanedLinks;
+        }
+
+        if (Object.keys(update).length === 0) {
+            const error = new Error('No valid contact fields to update');
+            error.code = 'NO_UPDATE_FIELDS';
             error.statusCode = 400;
             throw error;
         }
-        if (ctx.otp !== otp) {
-            const error = new Error('Please enter a valid 6-digit OTP');
-            error.code = 'OTP_INVALID';
-            error.statusCode = 400;
+
+        // use $set to avoid replacing entire subdocuments
+        const updatedUser = await authRepository.updateUserById(userId, { $set: update });
+        if (!updatedUser) {
+            const error = new Error('User not found');
+            error.code = 'USER_NOT_FOUND';
+            error.statusCode = 404;
             throw error;
         }
-        // Update password
-        await authRepository.updateUserPasswordByEmail(email, ctx.hashedNewPassword);
-        // Clear Redis key
-        await delKey(`otp:${email}`);
-        return true;
+
+        return { user: formatProfile(updatedUser), updatedFields };
     } catch (error) {
         throw error;
     }
