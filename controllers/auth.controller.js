@@ -1,5 +1,5 @@
-const asyncHandler = require("../utility/asyncHandler");
-const authService = require("../service/authService");
+const asyncHandler = require("../utils/asyncHandler");
+const authService = require("../services/auth.service");
 
 // @desc    Register a new user
 // @route   POST /api/auth/signup
@@ -7,7 +7,7 @@ const authService = require("../service/authService");
 exports.signup = asyncHandler(async (req, res) => {
     const { fullName, email, password, mobileNumber, skillsOffered, skillsNeeded } = req.body;
     const { user } = await authService.signup({ fullName, email, password, mobileNumber, skillsOffered, skillsNeeded });
-    
+
     res.status(201).json({
         success: true,
         message: 'Account created successfully',
@@ -21,7 +21,7 @@ exports.signup = asyncHandler(async (req, res) => {
 exports.login = asyncHandler(async (req, res) => {
     const { email, password } = req.body;
     const { user, token } = await authService.login({ email, password });
-    
+
     res.status(200).json({
         success: true,
         message: 'User logged in successfully',
@@ -76,7 +76,7 @@ exports.updateEmail = asyncHandler(async (req, res) => {
     res.status(200).json({
         success: true,
         message: `6 digit OTP shared to ${maskedEmail}`,
-        data: { email:currentEmail, ttlSeconds: otpTtlSeconds }
+        data: { email: currentEmail, ttlSeconds: otpTtlSeconds }
     });
 });
 
@@ -112,6 +112,25 @@ exports.updateContact = asyncHandler(async (req, res) => {
     res.status(200).json({
         success: true,
         message: 'Contact updated successfully',
+        data: { user, updatedFields }
+    });
+});
+
+// @desc    Update user avatar
+// @route   POST /api/auth/update-avatar
+// @access  Private
+exports.updateAvatar = asyncHandler(async (req, res) => {
+    if (!req.file) {
+        const error = new Error('Please upload an image file');
+        error.code = 'NO_FILE_UPLOADED';
+        error.statusCode = 400;
+        throw error;
+    }
+    const avatarPath = req.file.path;
+    const { user, updatedFields } = await authService.updateAvatar(req.user.id, avatarPath);
+    res.status(200).json({
+        success: true,
+        message: 'Avatar updated successfully',
         data: { user, updatedFields }
     });
 });

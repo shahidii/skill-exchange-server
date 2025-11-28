@@ -1,5 +1,5 @@
-const User = require("../model/User");
-const Skill = require("../model/Skill");
+const User = require("../models/User");
+const Skill = require("../models/Skill");
 
 const createUser = (userData) => User.create(userData);
 const findUserByEmail = (email) => User.findOne({ email }).populate("skillsOffered skillsNeeded");
@@ -11,4 +11,4 @@ const updateUserPasswordByEmail = (email, hashedPassword) => User.updateOne({ em
 const updateUserEmail = (currentEmail, newEmail) => User.updateOne({ email: currentEmail }, { $set: { email: newEmail } });
 const updateUserById = (id, update) => User.findByIdAndUpdate(id, update, { new: true }).populate('skillsOffered skillsNeeded');
 
-module.exports = { createUser , findUserByEmail , findUserByMobileNumber , findUserById , findSkillsByName , createSkill , updateUserPasswordByEmail, updateUserEmail, updateUserById };
+module.exports = { createUser, findUserByEmail, findUserByMobileNumber, findUserById, findSkillsByName, createSkill, updateUserPasswordByEmail, updateUserEmail, updateUserById };

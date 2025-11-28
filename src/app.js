@@ -1,9 +1,11 @@
 const express = require("express");
-const dotenv = require("dotenv").config();
-const { httpLogger, logger } = require("./utility/pino");
-const connectDB = require("./config/db");
-const errorHandler = require("./middleware/errorhandler");
+const { httpLogger } = require("../utils/logger");
+const connectDB = require("../config/db");
+const errorHandler = require("../middleware/error.middleware");
 const cors = require("cors");
+const routes = require("../routes");
+const path = require("path");
+
 const app = express();
 
 // Connect to the database 
@@ -13,9 +15,10 @@ connectDB();
 app.use(cors()); // Enable Cross-Origin Resource Sharing
 app.use(express.json()); // Parse JSON bodies
 app.use(httpLogger); // Log HTTP requests
+app.use('/uploads', express.static(path.join(__dirname, '../uploads'))); // Serve static files from uploads directory
 
 // Define routes
-app.use("/api/auth", require("./routes/authRoutes")); // Authentication routes
+app.use("/api", routes); // Mount all routes under /api
 
 // Default route
 app.get("/", (req, res) => {
@@ -25,8 +28,4 @@ app.get("/", (req, res) => {
 // Error handling middleware
 app.use(errorHandler); // Handle errors using errorHandler middleware
 
-// Start the server
-const port = process.env.PORT || 5000;
-app.listen(port, () => {
-  logger.info(`Server running at http://localhost:${port}`);
-});
+module.exports = app;

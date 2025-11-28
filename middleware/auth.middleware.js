@@ -1,8 +1,9 @@
+
 // middleware/authMiddleware.js
 // JWT authentication and role-based access control middleware
 
-const { verifyToken } = require('../utility/jwt');
-const asyncHandler = require("../utility/asyncHandler");
+const { verifyToken } = require('../utils/jwt');
+const asyncHandler = require("../utils/asyncHandler");
 
 const authenticate = asyncHandler(async (req, res, next) => {
   const authHeader = req.headers.authorization;
@@ -28,14 +29,14 @@ const authenticate = asyncHandler(async (req, res, next) => {
 
 // Is guest only
 const guestOnly = asyncHandler(async (req, res, next) => {
-    const authHeader = req.headers.authorization;
-    if (authHeader && authHeader.startsWith('Bearer ')) {
-      const error = new Error('User is already logged in');
-      error.code = 'USER_LOGGED_IN';
-      error.statusCode = 401;
-      throw error;
-    }
-    next();
-  });
+  const authHeader = req.headers.authorization;
+  if (authHeader && authHeader.startsWith('Bearer ')) {
+    const error = new Error('User is already logged in');
+    error.code = 'USER_LOGGED_IN';
+    error.statusCode = 401;
+    throw error;
+  }
+  next();
+});
 
-module.exports = { authenticate , guestOnly };
+module.exports = { authenticate, guestOnly };

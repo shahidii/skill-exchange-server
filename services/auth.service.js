@@ -1,9 +1,9 @@
-const { generateToken } = require("../utility/jwt");
+const { generateToken } = require("../utils/jwt");
 const bcrypt = require("bcrypt");
-const authRepository = require("../repository/authRepository");
-const { formatUser, formatProfile } = require("../utility/formatUser")
-const { sendOtpEmail } = require("../utility/mailer");
-const { setJsonWithTtl, getJson, delKey } = require("../utility/redis");
+const authRepository = require("../repositories/auth.repository");
+const { formatUser, formatProfile } = require("../utils/formatUser")
+const { sendOtpEmail } = require("../utils/otpMailer");
+const { setJsonWithTtl, getJson, delKey } = require("../utils/cache");
 
 // OTP storage handled via Redis: key `otp:<email>` -> { otp, hashedNewPassword }
 const DEFAULT_OTP_TTL_SECONDS = 180; // Always 3 minutes as requested
@@ -11,7 +11,7 @@ const DEFAULT_OTP_TTL_SECONDS = 180; // Always 3 minutes as requested
 function generateSixDigitOtp() {
     return Math.floor(100000 + Math.random() * 900000).toString();
 }
-311965
+
 function maskEmail(email) {
     if (!email || !email.includes('@')) return email;
     const [user, domain] = email.split('@');
@@ -186,58 +186,58 @@ exports.resendOtp = async ({ email }) => {
 // Verify OTP and finalize reset password or update email (read + delete from Redis)
 exports.verifyOtp = async ({ email, otp }) => {
     try {
-      if (!email || !otp) {
-        const error = new Error('Email and OTP are required');
-        error.code = 'VALIDATION_ERROR';
-        error.statusCode = 400;
-        throw error;
-      }
-  
-      const ctx = await getJson(`otp:${email}`);
-      if (!ctx || ctx.otp !== otp) {
-        const error = new Error('Please enter a valid 6-digit OTP');
-        error.code = 'OTP_INVALID';
-        error.statusCode = 400;
-        throw error;
-      }
-  
-      // OTP is valid; now check type Update Password or Update Email
-      if (ctx.type === 'reset_password') {
-        if (!ctx.hashedNewPassword) {
-          const error = new Error('Missing password reset context');
-          error.code = 'RESET_CONTEXT_MISSING';
-          error.statusCode = 400;
-          throw error;
+        if (!email || !otp) {
+            const error = new Error('Email and OTP are required');
+            error.code = 'VALIDATION_ERROR';
+            error.statusCode = 400;
+            throw error;
         }
-        await authRepository.updateUserPasswordByEmail(email, ctx.hashedNewPassword);
-      }
-  
-      else if (ctx.type === 'update_email') {
-        if (!ctx.newEmail) {
-          const error = new Error('Missing email update context');
-          error.code = 'UPDATE_EMAIL_CONTEXT_MISSING';
-          error.statusCode = 400;
-          throw error;
+
+        const ctx = await getJson(`otp:${email}`);
+        if (!ctx || ctx.otp !== otp) {
+            const error = new Error('Please enter a valid 6-digit OTP');
+            error.code = 'OTP_INVALID';
+            error.statusCode = 400;
+            throw error;
         }
-        await authRepository.updateUserEmail(email, ctx.newEmail);
-      }
-  
-      else {
-        const error = new Error('Unknown OTP context');
-        error.code = 'UNKNOWN_OTP_CONTEXT';
-        error.statusCode = 400;
-        throw error;
-      }
-  
-      // Cleanup
-      await delKey(`otp:${email}`);
-  
-      return true;
+
+        // OTP is valid; now check type Update Password or Update Email
+        if (ctx.type === 'reset_password') {
+            if (!ctx.hashedNewPassword) {
+                const error = new Error('Missing password reset context');
+                error.code = 'RESET_CONTEXT_MISSING';
+                error.statusCode = 400;
+                throw error;
+            }
+            await authRepository.updateUserPasswordByEmail(email, ctx.hashedNewPassword);
+        }
+
+        else if (ctx.type === 'update_email') {
+            if (!ctx.newEmail) {
+                const error = new Error('Missing email update context');
+                error.code = 'UPDATE_EMAIL_CONTEXT_MISSING';
+                error.statusCode = 400;
+                throw error;
+            }
+            await authRepository.updateUserEmail(email, ctx.newEmail);
+        }
+
+        else {
+            const error = new Error('Unknown OTP context');
+            error.code = 'UNKNOWN_OTP_CONTEXT';
+            error.statusCode = 400;
+            throw error;
+        }
+
+        // Cleanup
+        await delKey(`otp:${email}`);
+
+        return true;
     } catch (error) {
-      throw error;
+        throw error;
     }
-  };
-  
+};
+
 
 // Update user email
 exports.updateEmail = async ({ currentEmail, newEmail }) => {
@@ -393,6 +393,41 @@ exports.updateProfile = async (userId, body) => {
     }
 };
 
+
+// Update avatar
+exports.updateAvatar = async (userId, avatarUrl) => {
+    try {
+        if (!avatarUrl) {
+            const error = new Error('Avatar URL is required');
+            error.code = 'VALIDATION_ERROR';
+            error.field = 'avatar';
+            error.statusCode = 400;
+            throw error;
+        }
+
+        // Basic URL validation
+        const urlRegex = /^(https?:\/\/)?([\w-]+\.)+[\w-]+(\/[-\w-.\/?:%&=]*)?$/i;
+        if (!urlRegex.test(avatarUrl)) {
+            const error = new Error('Invalid avatar URL format');
+            error.code = 'INVALID_URL';
+            error.field = 'avatar';
+            error.statusCode = 400;
+            throw error;
+        }
+
+        const updatedUser = await authRepository.updateUserById(userId, { avatar: avatarUrl });
+        if (!updatedUser) {
+            const error = new Error('User not found');
+            error.code = 'USER_NOT_FOUND';
+            error.statusCode = 404;
+            throw error;
+        }
+
+        return { user: formatProfile(updatedUser), updatedFields: { avatar: avatarUrl } };
+    } catch (error) {
+        throw error;
+    }
+};
 
 // Update contact (partial). Accepts body like:
 // { mobileNumber, contact: { businessEmail, linkedIn, instagram, links } }

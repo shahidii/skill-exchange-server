@@ -2,11 +2,11 @@
   "name": "skill-swap-api",
   "version": "0.1.0",
   "description": "API for the Skill Swap website",
-  "main": "app.js",
+  "main": "src/server.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "start": "NODE_ENV=production node app.js || NODE_ENV=development node --watch app.js",
-    "dev": "node --watch app.js"
+    "start": "NODE_ENV=production node src/server.js || NODE_ENV=development node --watch src/server.js",
+    "dev": "node --watch src/server.js"
   },
   "keywords": [],
   "author": {
@@ -17,11 +17,14 @@
   "packageManager": "pnpm@10.13.1",
   "dependencies": {
     "bcrypt": "^6.0.0",
+    "cloudinary": "^2.8.0",
     "cors": "^2.8.5",
     "dotenv": "^17.2.2",
     "express": "^5.1.0",
     "jsonwebtoken": "^9.0.2",
     "mongoose": "^8.18.0",
+    "multer": "^2.0.2",
+    "multer-storage-cloudinary": "^4.0.0",
     "nodemailer": "^7.0.6",
     "pino": "^9.9.4",
     "pino-http": "^10.5.0",

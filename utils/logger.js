@@ -1,26 +1,9 @@
-const pino = require("pino");
 const pinoHttp = require("pino-http");
-
-const isDev = process.env.NODE_ENV !== "production";
-
-const logger = pino({
-  level: isDev ? "debug" : "info",
-  transport: isDev
-    ? {
-        target: "pino-pretty",
-        options: {
-          colorize: true,
-          translateTime: "SYS:dd-mm-yyyy HH:MM:ss",
-          singleLine: true,
-          ignore: "pid,hostname",
-        },
-      }
-    : undefined,
-});
+const { logger } = require("../config/pino");
 
 // Only keep these headers
 function filterHeaders(headers) {
-  const whitelist = ["host", "authorization" ,"content-type"]; // add more if needed
+  const whitelist = ["host", "authorization", "content-type"]; // add more if needed
   return Object.fromEntries(
     Object.entries(headers).filter(([key]) => whitelist.includes(key))
   );
@@ -28,7 +11,7 @@ function filterHeaders(headers) {
 
 const httpLogger = pinoHttp({
   logger,
-//   autoLogging: false,
+  //   autoLogging: false,
   customLogLevel: () => "info",
   serializers: {
     req: (req) => ({
@@ -42,7 +25,7 @@ const httpLogger = pinoHttp({
     const { method, url, id, query, params, headers } = req;
     const { statusCode } = res;
     // calculate response time correctly
-    const responseTime = res.responseTime ?? (res.getHeaders ? 0 : 0); 
+    const responseTime = res.responseTime ?? (res.getHeaders ? 0 : 0);
     return `${method} ${url} id:"${id}" query:${JSON.stringify(
       query
     )} params:${JSON.stringify(params)} \nheaders:${JSON.stringify(

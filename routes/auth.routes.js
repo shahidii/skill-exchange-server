@@ -1,7 +1,8 @@
 const express = require("express");
 const router = express.Router();
-const authController = require("../controller/authController");
-const { guestOnly, authenticate } = require("../middleware/authMiddleware");
+const authController = require("../controllers/auth.controller");
+const { guestOnly, authenticate } = require("../middleware/auth.middleware");
+const upload = require("../utils/upload");
 
 // @route    POST /api/auth/signup
 // @desc     Register a new user
@@ -47,5 +48,10 @@ router.post("/update-profile", authenticate, authController.updateProfile);
 // @desc     Update user contact details
 // @access   Private
 router.post("/update-contact", authenticate, authController.updateContact);
+
+// @route    POST /api/auth/update-avatar
+// @desc     Update user avatar
+// @access   Private
+router.post("/update-avatar", authenticate, upload.single('avatar'), authController.updateAvatar);
 
 module.exports = router;

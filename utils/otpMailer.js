@@ -1,18 +1,7 @@
 // utility/mailer.js
 // Sends HTML OTP emails via SMTP if configured; otherwise logs using pino logger.
-const { logger } = require('./pino');
-let nodemailer;
-let transporter; // singleton pooled transporter
-
-function isSmtpConfigured() {
-  return (
-    process.env.SMTP_HOST &&
-    process.env.SMTP_PORT &&
-    process.env.SMTP_USER &&
-    process.env.SMTP_PASS &&
-    process.env.MAIL_FROM
-  );
-}
+const { logger } = require('./logger');
+const { getTransporter, isSmtpConfigured } = require('../config/mailer');
 
 function buildOtpHtml({ otp, ttlSeconds }) {
   const expiresText = ttlSeconds < 60 ? `${ttlSeconds} seconds` : `${Math.round(ttlSeconds / 60)} minute(s)`;
@@ -52,28 +41,7 @@ async function sendOtpEmail({ to, otp, ttlSeconds = 60 }) {
     return; // do not throw; treat as non-fatal fallback
   }
 
-  // Lazy init pooled transporter once
-  if (!transporter) {
-    try {
-      nodemailer = require('nodemailer');
-    } catch (e) {
-      logger.error('[MAIL] nodemailer not installed. Please install with: npm install nodemailer');
-      const err = new Error('Nodemailer not installed');
-      err.code = 'NODEMAILER_NOT_INSTALLED';
-      err.statusCode = 500;
-      throw err; // bubble to error handler
-    }
-    transporter = nodemailer.createTransport({
-      host: process.env.SMTP_HOST,
-      port: Number(process.env.SMTP_PORT) || 587,
-      secure: String(process.env.SMTP_SECURE || 'false') === 'true',
-      requireTLS: true,
-      auth: {
-        user: process.env.SMTP_USER,
-        pass: process.env.SMTP_PASS,
-      },
-    });
-  }
+  const transporter = getTransporter();
 
   const html = buildOtpHtml({ otp, ttlSeconds });
 

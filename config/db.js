@@ -1,5 +1,5 @@
 const mongoose = require('mongoose');
-const { logger } = require('../utility/pino');
+const { logger } = require('../utils/logger');
 
 const connectDB = async () => {
     try {
