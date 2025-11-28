@@ -22,22 +22,14 @@ app.use("/api", routes); // Mount all routes under /api
 
 // Default route
 app.get("/", (req, res) => {
-    const uptimeSeconds = process.uptime();
-    const hours = Math.floor(uptimeSeconds / 3600);
-    const minutes = Math.floor((uptimeSeconds % 3600) / 60);
-    const seconds = Math.floor(uptimeSeconds % 60);
-    const uptime = `${hours}h ${minutes}m ${seconds}s`;
-
     res.status(200).json({
         success: true,
         message: "Skill Swap API is running",
         data: {
-            status: "ok",
             service: "skill-swap-api",
             version: "0.1.0",
             environment: process.env.NODE_ENV || "development",
-            timestamp: new Date().toISOString(),
-            uptime: uptime
+            timestamp: new Date().toISOString()
         }
     });
 });
