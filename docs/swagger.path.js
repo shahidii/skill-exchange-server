@@ -614,3 +614,127 @@
  *                         total: { type: integer, example: 51 }
  *                         totalPages: { type: integer, example: 6 }
  */
+
+/**
+ * @swagger
+ * /profiles/skills:
+ *   get:
+ *     summary: Get all skills with pagination
+ *     description: |
+ *       Returns all available skills in the platform with pagination support.
+ *       Ideal for infinite scroll dropdowns and skill selection interfaces.
+ *       
+ *       **Intelligent Sorting (Authenticated Users):**
+ *       When a user is logged in, skills are intelligently sorted to show the most relevant first:
+ *       1. Skills the user needs (from their `skillsNeeded` list) - Highest priority
+ *       2. Skills the user doesn't have yet - Medium priority 
+ *       3. Skills the user already has (from their `skillsOffered` list) - Lowest priority
+ *       
+ *       **Natural Order (Guest Users):**
+ *       - Skills appear in natural database order (insertion order)
+ *       - No sorting applied
+ *       
+ *       **Features:**
+ *       - Pagination with customizable limit
+ *       - Returns `hasMore` flag for infinite scroll implementation
+ *       - All skill names are lowercase
+ *       
+ *       **Pagination:**
+ *       - Default: page=1, limit=10
+ *       - Maximum limit: 50 skills per page
+ *       
+ *       **Use Cases:**
+ *       - Dropdown/Combobox with infinite scroll
+ *       - Autocomplete skill selection
+ *       - Skill analytics and reporting
+ *     tags: [Profiles]
+ *     security:
+ *       - bearerAuth: []
+ *       - {}
+ *     parameters:
+ *       - in: query
+ *         name: page
+ *         schema:
+ *           type: integer
+ *           minimum: 1
+ *           default: 1
+ *         description: Page number (minimum 1)
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           minimum: 1
+ *           maximum: 50
+ *           default: 10
+ *         description: Number of skills per page (max 50)
+ *     responses:
+ *       200:
+ *         description: Skills retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 message:
+ *                   type: string
+ *                   example: 'Skills retrieved successfully'
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     skills:
+ *                       type: array
+ *                       items:
+ *                         type: object
+ *                         properties:
+ *                           _id:
+ *                             type: string
+ *                             example: '60d0fe4f5311236168a109ca'
+ *                           name:
+ *                             type: string
+ *                             example: 'javascript'
+ *                             description: 'Skill name (lowercase)'
+ *                     pagination:
+ *                       type: object
+ *                       properties:
+ *                         page:
+ *                           type: integer
+ *                           example: 1
+ *                           description: 'Current page number'
+ *                         limit:
+ *                           type: integer
+ *                           example: 10
+ *                           description: 'Skills per page'
+ *                         total:
+ *                           type: integer
+ *                           example: 150
+ *                           description: 'Total number of skills available'
+ *                         totalPages:
+ *                           type: integer
+ *                           example: 15
+ *                           description: 'Total number of pages'
+ *                         hasMore:
+ *                           type: boolean
+ *                           example: true
+ *                           description: 'True if more pages exist (useful for infinite scroll)'
+ *             example:
+ *               success: true
+ *               message: 'Skills retrieved successfully'
+ *               data:
+ *                 skills:
+ *                   - _id: '60d0fe4f5311236168a109ca'
+ *                     name: 'javascript'
+ *                   - _id: '60d0fe4f5311236168a109cb'
+ *                     name: 'python'
+ *                   - _id: '60d0fe4f5311236168a109cc'
+ *                     name: 'react'
+ *                 pagination:
+ *                   page: 1
+ *                   limit: 10
+ *                   total: 150
+ *                   totalPages: 15
+ *                   hasMore: true
+ */
+

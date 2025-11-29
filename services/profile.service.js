@@ -1,5 +1,4 @@
 const profileRepository = require("../repositories/profile.repository");
-const authRepository = require("../repositories/auth.repository");
 const { setJsonWithTtl, getJson } = require("../utils/cache");
 const { formatProfiles } = require("../utils/formatUser");
 
@@ -21,7 +20,7 @@ exports.getProfiles = async (userId, page = 1, limit = 9) => {
 
         // If authenticated, fetch user's skillsNeeded for skill matching
         if (userId) {
-            const user = await authRepository.findUserById(userId);
+            const user = await profileRepository.findUserById(userId);
             if (user && user.skillsNeeded) {
                 // Extract skill IDs for matching
                 skillsNeeded = user.skillsNeeded.map(skill => skill._id);
@@ -54,3 +53,36 @@ exports.getProfiles = async (userId, page = 1, limit = 9) => {
         throw error;
     }
 };
+
+// Get skills with pagination
+exports.getSkills = async (userId, page = 1, limit = 10) => {
+    let userSkillsNeeded = [];
+    let userSkillsOffered = [];
+
+    // If authenticated, fetch user's skills for personalized sorting
+    if (userId) {
+        const user = await profileRepository.findUserById(userId);
+        if (user && user.skillsNeeded) {
+            // Extract skill IDs for prioritization
+            userSkillsNeeded = user.skillsNeeded.map(skill => skill._id || skill);
+        }
+        // Also get skills the user already has to show them lower priority
+        if (user && user.skillsOffered) {
+            userSkillsOffered = user.skillsOffered.map(skill => skill._id || skill);
+        }
+    }
+
+    const result = await profileRepository.getSkills({
+        userId,
+        userSkillsNeeded,
+        userSkillsOffered,
+        page,
+        limit
+    });
+
+    return {
+        skills: result.skills,
+        pagination: result.pagination
+    };
+};
+

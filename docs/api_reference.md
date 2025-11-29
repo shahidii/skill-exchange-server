@@ -1143,6 +1143,120 @@ Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
 
 ---
 
+## GET /profiles/skills
+
+Get all available skills with pagination support. Ideal for infinite scroll dropdowns and skill selection interfaces.
+
+- **URL**: `/api/profiles/skills`
+- **Method**: `GET`
+- **Auth Required**: No (Optional - results personalized if authenticated)
+
+### Query Parameters
+
+| Parameter | Type | Required | Default | Max | Description |
+|-----------|------|----------|---------|-----|-------------|
+| `page` | integer | No | 1 | - | Page number (minimum: 1) |
+| `limit` | integer | No | 10 | 50 | Skills per page |
+
+### Sorting
+
+**For Authenticated Users:**
+Skills are intelligently sorted based on the user's profile:
+1. **Skills user needs** (from `skillsNeeded`) - Highest priority
+2. **Skills user doesn't have** - Medium priority
+3. **Skills user already has** (from `skillsOffered`) - Lowest priority
+
+**For Guest Users:**
+- Skills appear in **natural database order** (insertion order)
+- No sorting applied
+
+### Success Response (200 OK)
+
+```json
+{
+  "success": true,
+  "message": "Skills retrieved successfully",
+  "data": {
+    "skills": [
+      {
+        "_id": "60d0fe4f5311236168a109ca",
+        "name": "javascript"
+      },
+      {
+        "_id": "60d0fe4f5311236168a109cb",
+        "name": "python"
+      },
+      {
+        "_id": "60d0fe4f5311236168a109cc",
+        "name": "react"
+      }
+    ],
+    "pagination": {
+      "page": 1,
+      "limit": 10,
+      "total": 150,
+      "totalPages": 15,
+      "hasMore": true
+    }
+  }
+}
+```
+
+### Example Requests
+
+**Default (Page 1, Limit 10):**
+```bash
+GET /api/profiles/skills
+```
+
+**Custom Pagination:**
+```bash
+GET /api/profiles/skills?page=2&limit=20
+GET /api/profiles/skills?page=1&limit=50
+```
+
+**For Infinite Scroll:**
+```bash
+# Load first batch
+GET /api/profiles/skills?page=1&limit=10
+
+# Load next batch when user scrolls
+GET /api/profiles/skills?page=2&limit=10
+```
+
+### Response Fields
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `skills` | array | Array of skill objects |
+| `skills[]._id` | string | Unique skill identifier |
+| `skills[].name` | string | Skill name (lowercase) |
+| `pagination.page` | integer | Current page number |
+| `pagination.limit` | integer | Skills per page |
+| `pagination.total` | integer | Total number of skills available |
+| `pagination.totalPages` | integer | Total number of pages |
+| `pagination.hasMore` | boolean | True if more pages exist (useful for infinite scroll) |
+
+### Notes
+
+- All skill names are stored in **lowercase**
+- Skills are unique (no duplicates)
+- The `hasMore` field is particularly useful for implementing infinite scroll
+- Maximum limit is 50 skills per page
+- Minimum page is 1
+- **Personalization**: When a user is authenticated, skills they need are shown first, making it easier to find relevant skills
+- **Smart Sorting**: Skills the user already has are shown last, reducing clutter
+- **Guest Experience**: Non-authenticated users see all skills in alphabetical order
+
+### Use Cases
+
+1. **Dropdown/Combobox**: Load skills in batches as user scrolls
+2. **Autocomplete**: Fetch all skills and filter client-side
+3. **Skill Selection**: Display paginated list of available skills
+4. **Analytics**: Get total count of skills in the platform
+
+
+
 ## Error Codes Reference
 
 | Code | HTTP Status | Description |
