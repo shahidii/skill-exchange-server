@@ -540,7 +540,7 @@
 
 /**
  * @swagger
- * /auth/profiles:
+ * /profiles/:
  *   get:
  *     summary: Get recommended profiles with pagination
  *     description: |

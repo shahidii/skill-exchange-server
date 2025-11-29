@@ -54,9 +54,5 @@ router.post("/update-contact", authenticate, authController.updateContact);
 // @access   Private
 router.post("/update-avatar", authenticate, upload.single('avatar'), authController.updateAvatar);
 
-// @route    GET /api/auth/profiles
-// @desc     Get up to 9 recommended profiles with pagination
-// @access   Public (optional authentication for personalized results)
-router.get("/profiles", optionalAuth, authController.getProfiles);
 
 module.exports = router;

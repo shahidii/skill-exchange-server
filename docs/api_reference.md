@@ -1000,11 +1000,11 @@ The API uses a standardized error response format for all 4xx and 5xx errors.
 
 ---
 
-## GET /auth/profiles
+## GET /profiles
 
 Get recommended user profiles with intelligent sorting and pagination.
 
-- **URL**: `/api/auth/profiles`
+- **URL**: `/api/profiles`
 - **Method**: `GET`
 - **Auth Required**: No (Optional - results personalized if authenticated)
 
@@ -1105,18 +1105,18 @@ Get recommended user profiles with intelligent sorting and pagination.
 
 **Default (Page 1, Limit 9):**
 ```bash
-GET /api/auth/profiles
+GET /api/profiles
 ```
 
 **Custom Pagination:**
 ```bash
-GET /api/auth/profiles?page=2&limit=9
-GET /api/auth/profiles?page=1&limit=20
+GET /api/profiles?page=2&limit=9
+GET /api/profiles?page=1&limit=20
 ```
 
 **With Authentication (Skill-based sorting):**
 ```bash
-GET /api/auth/profiles
+GET /api/profiles
 Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
 ```
 
