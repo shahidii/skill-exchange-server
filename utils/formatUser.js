@@ -66,4 +66,37 @@ function formatProfile(user) {
     };
 }
 
-module.exports = { formatUser, formatProfile };
+function formatProfiles(profiles) {
+    if (!profiles) return null;
+    return profiles.map(user => ({
+        _id: user._id,
+        fullName: user.fullName,
+        bio: user.bio,
+        avatar: user.avatar,
+        mobileNumber: user.mobileNumber,
+        contact: user.contact,
+        location: user.location,
+        skillsOffered: user.skillsOffered?.map(skill => ({
+            _id: skill._id,
+            name: skill.name
+        })),
+        skillsNeeded: user.skillsNeeded?.map(skill => ({
+            _id: skill._id,
+            name: skill.name
+        })),
+        review: user.review?.map(review => ({
+            _id: review._id,
+            user: review.user,
+            rating: review.rating,
+            comment: review.comment,
+            createdAt: review.createdAt
+        })),
+        rating: user.rating,
+        createdAt: user.createdAt,
+        reviewCount: user?.reviewCount,
+        acceptedRequestsCount: user?.acceptedRequestsCount
+    }));
+}
+
+    
+module.exports = { formatUser, formatProfile, formatProfiles };

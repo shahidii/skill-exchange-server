@@ -85,6 +85,8 @@ exports.updateEmail = asyncHandler(async (req, res) => {
 // @access  Private
 exports.getProfile = asyncHandler(async (req, res) => {
     const { user } = await authService.getProfile(req.user.id);
+    console.log(req.user, "######");
+    
     res.status(200).json({
         success: true,
         message: 'User profile retrieved successfully',
@@ -132,5 +134,25 @@ exports.updateAvatar = asyncHandler(async (req, res) => {
         success: true,
         message: 'Avatar updated successfully',
         data: { user, updatedFields }
+    });
+});
+
+// @desc    Get up to 9 recommended profiles with pagination
+// @route   GET /api/auth/profiles
+// @access  Public
+exports.getProfiles = asyncHandler(async (req, res) => {
+    const userId = req.user?.id; // Optional - undefined if not authenticated
+    console.log("#####",req.user);
+    
+    // Extract and validate pagination params
+    const page = Math.max(1, parseInt(req.query.page) || 1);
+    const limit = Math.min(50, Math.max(1, parseInt(req.query.limit) || 9));
+
+    const result = await authService.getProfiles(userId, page, limit);
+
+    res.status(200).json({
+        success: true,
+        message: 'Profiles retrieved successfully',
+        data: result
     });
 });

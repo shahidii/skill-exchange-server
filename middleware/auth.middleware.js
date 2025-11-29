@@ -39,4 +39,32 @@ const guestOnly = asyncHandler(async (req, res, next) => {
   next();
 });
 
-module.exports = { authenticate, guestOnly };
+// Optional authentication - attaches user if token is present, but doesn't fail if missing
+const optionalAuth = async (req, res, next) => {
+  try {
+    const authHeader = req.headers.authorization;
+
+    // If no token, continue without user
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return next();
+    }
+
+    const token = authHeader.split(' ')[1];
+
+    // Verify token
+    const decoded = verifyToken(token); // Using verifyToken from utils/jwt
+
+    // Attach user to request
+    req.user = {
+      id: decoded.id,
+      email: decoded.email
+    };
+
+    next();
+  } catch (error) {
+    // If token is invalid, just continue without user (don't throw error)
+    next();
+  }
+};
+
+module.exports = { authenticate, guestOnly, optionalAuth };

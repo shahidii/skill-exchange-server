@@ -537,3 +537,80 @@
  *               InvalidToken:
  *                 value: { success: false, error: { code: 'INVALID_TOKEN', message: 'Session expired. Please log in again.' } }
  */
+
+/**
+ * @swagger
+ * /auth/profiles:
+ *   get:
+ *     summary: Get recommended profiles with pagination
+ *     description: |
+ *       Returns up to 9 user profiles with intelligent sorting based on authentication status.
+ *       
+ *       **For Authenticated Users:**
+ *       - Profiles sorted by skill match (user's skillsNeeded vs profile's skillsOffered)
+ *       - Then by review count, rating, and accepted requests
+ *       
+ *       **For Guest Users:**
+ *       - Profiles sorted by popularity (review count, rating, accepted requests)
+ *       - Results cached for 5 minutes
+ *       
+ *       **Pagination:**
+ *       - Default: page=1, limit=9
+ *       - Maximum limit: 50 profiles per page
+ *     tags: [Profiles]
+ *     parameters:
+ *       - in: query
+ *         name: page
+ *         schema:
+ *           type: integer
+ *           minimum: 1
+ *           default: 1
+ *         description: Page number (minimum 1)
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           minimum: 1
+ *           maximum: 50
+ *           default: 9
+ *         description: Number of profiles per page (max 50)
+ *     security:
+ *       - bearerAuth: []
+ *       - {}
+ *     responses:
+ *       200:
+ *         description: Profiles retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success: { type: boolean, example: true }
+ *                 message: { type: string, example: 'Profiles retrieved successfully' }
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     profiles:
+ *                       type: array
+ *                       items:
+ *                         type: object
+ *                         properties:
+ *                           _id: { type: string }
+ *                           fullName: { type: string }
+ *                           bio: { type: string }
+ *                           avatar: { type: string }
+ *                           mobileNumber: { type: string }
+ *                           location: { type: string }
+ *                           rating: { type: number }
+ *                           skillsOffered: { type: array }
+ *                           skillsNeeded: { type: array }
+ *                           reviewCount: { type: integer }
+ *                           acceptedRequestsCount: { type: integer }
+ *                     pagination:
+ *                       type: object
+ *                       properties:
+ *                         page: { type: integer, example: 1 }
+ *                         limit: { type: integer, example: 9 }
+ *                         total: { type: integer, example: 51 }
+ *                         totalPages: { type: integer, example: 6 }
+ */

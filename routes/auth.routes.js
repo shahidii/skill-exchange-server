@@ -1,7 +1,7 @@
 const express = require("express");
 const router = express.Router();
 const authController = require("../controllers/auth.controller");
-const { guestOnly, authenticate } = require("../middleware/auth.middleware");
+const { authenticate, guestOnly, optionalAuth } = require("../middleware/auth.middleware");
 const upload = require("../utils/upload");
 
 // @route    POST /api/auth/signup
@@ -53,5 +53,10 @@ router.post("/update-contact", authenticate, authController.updateContact);
 // @desc     Update user avatar
 // @access   Private
 router.post("/update-avatar", authenticate, upload.single('avatar'), authController.updateAvatar);
+
+// @route    GET /api/auth/profiles
+// @desc     Get up to 9 recommended profiles with pagination
+// @access   Public (optional authentication for personalized results)
+router.get("/profiles", optionalAuth, authController.getProfiles);
 
 module.exports = router;

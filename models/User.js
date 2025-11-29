@@ -20,7 +20,7 @@ const userSchema = new mongoose.Schema({
   fullName: { type: String, required: true, trim: true },
   bio: { type: String, trim: true },
   email: { type: String, required: true, unique: true, lowercase: true, trim: true },
-  mobileNumber: { type: String, required: true, unique: true, trim: true },
+  mobileNumber: { type: String, unique: true, trim: true },
   contact: {
     businessEmail: { type: String, trim: true },
     linkedIn: { type: String, trim: true },

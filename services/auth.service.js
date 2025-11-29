@@ -1,7 +1,7 @@
 const { generateToken } = require("../utils/jwt");
 const bcrypt = require("bcrypt");
 const authRepository = require("../repositories/auth.repository");
-const { formatUser, formatProfile } = require("../utils/formatUser")
+const { formatUser, formatProfile, formatProfiles } = require("../utils/formatUser")
 const { sendOtpEmail } = require("../utils/otpMailer");
 const { setJsonWithTtl, getJson, delKey } = require("../utils/cache");
 
@@ -43,7 +43,6 @@ exports.signup = async (body) => {
 
         const { fullName, email, password, mobileNumber, skillsOffered, skillsNeeded } = body;
         const existingEmail = await authRepository.findUserByEmail(email);
-        const existingMobileNumber = await authRepository.findUserByMobileNumber(mobileNumber);
         if (existingEmail) {
             const error = new Error('Email already registered');
             error.code = 'EMAIL_EXISTS';
@@ -51,12 +50,15 @@ exports.signup = async (body) => {
             error.statusCode = 400;
             throw error;
         }
-        if (existingMobileNumber) {
-            const error = new Error('Mobile number already registered');
-            error.code = 'NUMBER_EXISTS';
-            error.field = 'mobileNumber';
-            error.statusCode = 400;
-            throw error;
+        if (mobileNumber) { // Only validate if mobileNumber is provided
+            const existingMobileNumber = await authRepository.findUserByMobileNumber(mobileNumber);
+            if (existingMobileNumber) {
+                const error = new Error('Mobile number already registered');
+                error.code = 'NUMBER_EXISTS';
+                error.field = 'mobileNumber';
+                error.statusCode = 400;
+                throw error;
+            }
         }
         // Checking skillsOffered array and skillsNeeded array elements is unique & not same 
         if (skillsOffered.length !== new Set(skillsOffered).size) {
@@ -613,7 +615,60 @@ exports.updateContact = async (userId, body) => {
             throw error;
         }
 
+
         return { user: formatProfile(updatedUser), updatedFields };
+    } catch (error) {
+        throw error;
+    }
+};
+
+// Get profiles (up to 9 recommended profiles with pagination)
+exports.getProfiles = async (userId, page = 1, limit = 9) => {
+    try {
+        // Cache key for guest users only
+        const cacheKey = userId ? null : `profiles:guest:page${page}:limit${limit}`;
+
+        // Check cache for guest users
+        if (cacheKey) {
+            const cached = await getJson(cacheKey);
+            if (cached) {
+                return cached; // Return cached data
+            }
+        }
+
+        let skillsNeeded = [];
+
+        // If authenticated, fetch user's skillsNeeded for skill matching
+        if (userId) {
+            const user = await authRepository.findUserById(userId);
+            if (user && user.skillsNeeded) {
+                // Extract skill IDs for matching
+                skillsNeeded = user.skillsNeeded.map(skill => skill._id);
+            }
+        }
+
+        // Fetch profiles with intelligent sorting and pagination
+        const result = await authRepository.getProfiles({
+            userId,
+            skillsNeeded,
+            page,
+            limit
+        });
+
+        // Format profiles (exclude password and sensitive data)
+        const formattedProfiles = formatProfiles(result.profiles);
+
+        const response = {
+            profiles: formattedProfiles,
+            pagination: result.pagination
+        };
+
+        // Cache for guest users (5 minutes = 300 seconds)
+        if (cacheKey) {
+            await setJsonWithTtl(cacheKey, response, 300);
+        }
+
+        return response;
     } catch (error) {
         throw error;
     }

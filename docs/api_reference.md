@@ -997,3 +997,171 @@ The API uses a standardized error response format for all 4xx and 5xx errors.
   }
 }
 ```
+
+---
+
+## GET /auth/profiles
+
+Get recommended user profiles with intelligent sorting and pagination.
+
+- **URL**: `/api/auth/profiles`
+- **Method**: `GET`
+- **Auth Required**: No (Optional - results personalized if authenticated)
+
+### Query Parameters
+
+| Parameter | Type | Required | Default | Max | Description |
+|-----------|------|----------|---------|-----|-------------|
+| `page` | integer | No | 1 | - | Page number (minimum: 1) |
+| `limit` | integer | No | 9 | 50 | Profiles per page |
+
+### Sorting Logic
+
+**For Authenticated Users:**
+1. Skill Match Count (user's skillsNeeded vs profile's skillsOffered)
+2. Review Count (descending)
+3. Rating (descending)
+4. Accepted Requests Count (descending)
+
+**For Guest Users:**
+1. Review Count (descending)
+2. Rating (descending)
+3. Accepted Requests Count (descending)
+
+### Caching
+
+- **Guest Users**: Results cached for 5 minutes (Redis/in-memory)
+- **Authenticated Users**: Not cached (personalized results)
+
+### Success Response (200 OK)
+
+```json
+{
+  "success": true,
+  "message": "Profiles retrieved successfully",
+  "data": {
+    "profiles": [
+      {
+        "_id": "60d0fe4f5311236168a109ca",
+        "fullName": "John Doe",
+        "bio": "Full stack developer with 5 years experience",
+        "avatar": "https://res.cloudinary.com/...",
+        "mobileNumber": "9876543210",
+        "location": "New York, USA",
+        "rating": 4.5,
+        "contact": {
+          "businessEmail": "contact@johndoe.com",
+          "linkedIn": "https://linkedin.com/in/johndoe",
+          "instagram": "https://instagram.com/johndoe",
+          "links": [
+            {
+              "name": "Portfolio",
+              "url": "https://johndoe.com"
+            }
+          ]
+        },
+        "skillsOffered": [
+          {
+            "_id": "60d0fe4f5311236168a109cb",
+            "name": "javascript"
+          },
+          {
+            "_id": "60d0fe4f5311236168a109cc",
+            "name": "react"
+          }
+        ],
+        "skillsNeeded": [
+          {
+            "_id": "60d0fe4f5311236168a109cd",
+            "name": "python"
+          }
+        ],
+        "review": [
+          {
+            "_id": "60d0fe4f5311236168a109ce",
+            "user": "60d0fe4f5311236168a109cf",
+            "rating": 5,
+            "comment": "Great teacher!",
+            "createdAt": "2024-01-15T10:30:00.000Z"
+          }
+        ],
+        "createdAt": "2024-01-01T00:00:00.000Z",
+        "reviewCount": 15,
+        "acceptedRequestsCount": 8
+      }
+      // ... 8 more profiles
+    ],
+    "pagination": {
+      "page": 1,
+      "limit": 9,
+      "total": 51,
+      "totalPages": 6
+    }
+  }
+}
+```
+
+### Example Requests
+
+**Default (Page 1, Limit 9):**
+```bash
+GET /api/auth/profiles
+```
+
+**Custom Pagination:**
+```bash
+GET /api/auth/profiles?page=2&limit=9
+GET /api/auth/profiles?page=1&limit=20
+```
+
+**With Authentication (Skill-based sorting):**
+```bash
+GET /api/auth/profiles
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+```
+
+### Response Fields
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `profiles` | array | Array of profile objects |
+| `profiles[].reviewCount` | integer | Calculated count of reviews |
+| `profiles[].acceptedRequestsCount` | integer | Calculated count of accepted requests |
+| `pagination.page` | integer | Current page number |
+| `pagination.limit` | integer | Profiles per page |
+| `pagination.total` | integer | Total number of profiles available |
+| `pagination.totalPages` | integer | Total number of pages |
+
+### Notes
+
+- Profiles are sorted differently for authenticated vs guest users
+- Authenticated users see profiles with matching skills first
+- Current user is excluded from results (if authenticated)
+- Results are cached for guest users to improve performance
+- Maximum limit is 50 profiles per page
+- Minimum page is 1
+
+---
+
+## Error Codes Reference
+
+| Code | HTTP Status | Description |
+|------|-------------|-------------|
+| `EMAIL_EXISTS` | 400 | Email already registered |
+| `NUMBER_EXISTS` | 400 | Mobile number already registered |
+| `SKILLS_HAVE_DUPLICATE` | 400 | skillsOffered contains duplicates |
+| `SKILLS_NEED_DUPLICATE` | 400 | skillsNeeded contains duplicates |
+| `SKILLS_HAVE_AND_NEED_COMMON` | 400 | skillsOffered and skillsNeeded overlap |
+| `INVALID_CREDENTIALS` | 401 | Invalid email/password or user not found |
+| `NO_TOKEN` | 401 | Authorization header missing |
+| `INVALID_TOKEN` | 401 | Token expired or invalid |
+| `USER_LOGGED_IN` | 401 | User already authenticated (guest-only routes) |
+| `NEW_PASSWORD_SAME_AS_OLD` | 400 | New password matches current password |
+| `OTP_INVALID` | 400 | Invalid or expired OTP |
+| `VALIDATION_ERROR` | 400 | Required field missing or invalid |
+| `NO_UPDATE_FIELDS` | 400 | No valid fields provided for update |
+| `USER_NOT_FOUND` | 404 | User not found |
+| `INVALID_MOBILE` | 400 | Invalid mobile number format |
+| `INVALID_URL` | 400 | Invalid URL format |
+| `NO_FILE_UPLOADED` | 400 | File upload required but not provided |
+| `INVALID_FILE_TYPE` | 400 | Unsupported file type |
