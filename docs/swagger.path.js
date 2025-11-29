@@ -242,7 +242,6 @@
  *                 - $ref: '#/components/schemas/Success'
  *                 - type: object
  *                   properties:
- *                   properties:
  *                     message: { type: string, example: 'OTP verified successfully! Please log in' }
  *             example:
  *               success: true
