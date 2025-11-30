@@ -18,4 +18,9 @@ router.get("/search", optionalAuth, profileController.searchProfiles);
 // @access   Public (optional authentication for personalized results)
 router.get("/", optionalAuth, profileController.getProfiles);
 
+// @route    GET /api/profiles/:id
+// @desc     Get single profile by ID
+// @access   Public
+router.get("/:id", optionalAuth, profileController.getProfileById);
+
 module.exports = router;

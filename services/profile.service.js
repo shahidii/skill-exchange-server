@@ -108,3 +108,21 @@ exports.getSkills = async (userId, page = 1, limit = 10) => {
         pagination: result.pagination
     };
 };
+
+// Get single profile by ID
+exports.getProfileById = async (id) => {
+    try {
+        const profile = await profileRepository.getProfileById(id);
+
+        if (!profile) {
+            return null;
+        }
+
+        // Format profile (exclude password and sensitive data if any remains)
+        // formatProfiles expects an array, so we wrap and unwrap
+        const formattedProfiles = formatProfiles([profile]);
+        return formattedProfiles[0];
+    } catch (error) {
+        throw error;
+    }
+};

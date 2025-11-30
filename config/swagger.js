@@ -5,12 +5,12 @@ const options = {
     definition: {
         openapi: '3.0.0',
         info: {
-            title: 'Skill Exchange Platform API',
+            title: 'SkillSwap Platform API',
             version: '1.0.0',
-            description: 'Backend API for the Skill Exchange Platform. Built with Node.js, Express, and MongoDB.',
+            description: 'Backend API for the SkillSwap Platform. Built with Node.js, Express, and MongoDB.',
             contact: {
                 name: 'API Support',
-                email: 'support@skillexchange.com',
+                email: 'support@skillswap.com',
             },
         },
         servers: [
@@ -19,7 +19,7 @@ const options = {
                 description: 'Development Server',
             },
             {
-                url: 'https://api.skillexchange.com/v1',
+                url: 'https://api.skillswap.com/v1',
                 description: 'Production Server',
             },
         ],

@@ -771,7 +771,7 @@
  *         name: q
  *         schema:
  *           type: string
- *         description: Text search query (searches in fullName, bio, location)
+ *         description: Text search query (searches in fullName, bio, location, and skills)
  *       - in: query
  *         name: skills
  *         schema:
@@ -870,4 +870,43 @@
  *                         totalPages:
  *                           type: integer
  *                           example: 6
+ */
+
+/**
+ * @swagger
+ * /profiles/{id}:
+ *   get:
+ *     summary: Get single profile by ID
+ *     description: Retrieve a user's profile information by their unique ID.
+ *     tags: [Profiles]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: User ID
+ *     security:
+ *       - bearerAuth: []
+ *       - {}
+ *     responses:
+ *       200:
+ *         description: Profile retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               allOf:
+ *                 - $ref: '#/components/schemas/Success'
+ *                 - type: object
+ *                   properties:
+ *                     data:
+ *                       $ref: '#/components/schemas/Profile'
+ *       404:
+ *         description: Profile not found
+ *         content:
+ *           application/json:
+ *             schema: { $ref: '#/components/schemas/Error' }
+ *             examples:
+ *               UserNotFound:
+ *                 value: { success: false, error: { code: 'USER_NOT_FOUND', message: 'Profile not found' } }
  */

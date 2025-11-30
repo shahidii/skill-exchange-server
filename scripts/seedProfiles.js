@@ -26,10 +26,10 @@ const skillsList = [
 const bioTemplates = [
     'Passionate {skill1} expert with {years} years of experience. Love helping others learn {skill2}.',
     'Professional {skill1} specialist. Currently exploring {skill2} and looking to exchange knowledge.',
-    '{skill1} enthusiast seeking to master {skill2}. Open to skill exchange and collaboration.',
+    '{skill1} enthusiast seeking to master {skill2}. Open to SkillSwap and collaboration.',
     'Experienced in {skill1}, eager to learn {skill2}. Let\'s grow together!',
     'Full-time {skill1} professional. Part-time {skill2} learner. Always ready to share and learn.',
-    '{years} years in {skill1}. Now diving into {skill2}. Skill exchange is the best way to learn!',
+    '{years} years in {skill1}. Now diving into {skill2}. SkillSwap is the best way to learn!',
     'Creative {skill1} practitioner. Curious about {skill2}. Let\'s exchange skills and ideas.',
     'Tech-savvy {skill1} developer. Interested in learning {skill2} from experienced practitioners.',
 ];
@@ -78,7 +78,7 @@ function generateReviews(count) {
                 'Great experience! Very knowledgeable and patient.',
                 'Excellent teacher. Learned a lot in a short time.',
                 'Highly recommend! Very professional and helpful.',
-                'Amazing skill exchange session. Will definitely connect again.',
+                'Amazing SkillSwap session. Will definitely connect again.',
                 'Very patient and clear in explanations. Thank you!',
                 'Fantastic mentor. Made complex topics easy to understand.',
                 'Great communication and teaching style.',

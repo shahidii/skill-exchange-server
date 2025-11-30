@@ -1,7 +1,7 @@
-# Skill Exchange Platform Server
+# SkillSwap Platform Server
 
 ## Project Overview
-The Skill Exchange Platform is a backend API designed to facilitate skill sharing between users. It allows users to register, log in, and manage their skills by specifying the skills they have and those they need.
+The SkillSwap Platform is a backend API designed to facilitate skill sharing between users. It allows users to register, log in, and manage their skills by specifying the skills they have and those they need.
 
 ## Features
 - **Authentication**: Secure user registration and login using JWT tokens.
@@ -70,4 +70,4 @@ The project follows a clean architecture with separate modules for:
 5. Open a pull request and describe your changes.
 
 ## License & Author Information
-The Skill Exchange Platform is licensed under the ISC license. The project was created by [Muhammed Shahid](https://github.com/shahidii).
+The SkillSwap Platform is licensed under the ISC license. The project was created by [Muhammed Shahid](https://github.com/shahidii).

@@ -2,8 +2,17 @@ const mongoose = require('mongoose');
 const User = require("../models/User");
 const Skill = require("../models/Skill");
 
-// Find user by ID
-const findUserById = (id) => User.findById(id).select('skillsNeeded').lean();
+// Find user by ID (internal use)
+const findUserById = (id) => User.findById(id).select('skillsNeeded skillsOffered').lean();
+
+// Get single profile by ID with populated skills
+const getProfileById = async (id) => {
+    return await User.findById(id)
+        .select('-password')
+        .populate('skillsOffered')
+        .populate('skillsNeeded')
+        .lean();
+};
 
 // Search profiles with pagination
 const searchProfiles = async ({ userId, query, skills, page = 1, limit = 9 }) => {
@@ -371,4 +380,4 @@ const getProfiles = async ({ userId, skillsNeeded = [], page = 1, limit = 9 }) =
     };
 };
 
-module.exports = { getProfiles, findUserById, getSkills, searchProfiles };
+module.exports = { getProfiles, findUserById, getSkills, searchProfiles, getProfileById };

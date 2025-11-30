@@ -6,14 +6,14 @@ const profileService = require("../services/profile.service");
 // @access  Public
 exports.searchProfiles = asyncHandler(async (req, res) => {
     const userId = req.user?.id; // Optional - undefined if not authenticated
-    
+
     // Extract and validate pagination params
     const page = Math.max(1, parseInt(req.query.page) || 1);
     const limit = Math.min(50, Math.max(1, parseInt(req.query.limit) || 9));
-    
+
     // Extract search parameters
     const { q, skills } = req.query;
-    
+
     const result = await profileService.searchProfiles({
         userId,
         query: q,
@@ -21,7 +21,7 @@ exports.searchProfiles = asyncHandler(async (req, res) => {
         page,
         limit
     });
-    
+
     res.status(200).json({
         success: true,
         message: 'Profiles retrieved successfully',
@@ -64,5 +64,25 @@ exports.getSkills = asyncHandler(async (req, res) => {
         success: true,
         message: 'Skills retrieved successfully',
         data: result
+    });
+});
+
+// @desc    Get single profile by ID
+// @route   GET /api/profiles/:id
+// @access  Public
+exports.getProfileById = asyncHandler(async (req, res) => {
+    const { id } = req.params;
+
+    const profile = await profileService.getProfileById(id);
+
+    if (!profile) {
+        res.status(404);
+        throw new Error('Profile not found');
+    }
+
+    res.status(200).json({
+        success: true,
+        message: 'Profile retrieved successfully',
+        data: profile
     });
 });

@@ -1,12 +1,12 @@
-# Skill Exchange Platform API
+# SkillSwap Platform API
 **Version 1.0.0**
 
 ## Introduction
-Welcome to the Skill Exchange Platform API documentation. This API powers the backend for the Skill Exchange application, enabling users to register, manage their profiles, and exchange skills. It is built using **Node.js**, **Express**, and **MongoDB**.
+Welcome to the SkillSwap Platform API documentation. This API powers the backend for the SkillSwap application, enabling users to register, manage their profiles, and exchange skills. It is built using **Node.js**, **Express**, and **MongoDB**.
 
 ## Base URLs
 - **Development**: `http://localhost:8080/api`
-- **Production**: `https://api.skillexchange.com/v1`
+- **Production**: `https://api.skillswap.com/v1`
 
 ## Authentication
 The API uses **JSON Web Tokens (JWT)** for authentication.
@@ -1269,14 +1269,14 @@ Search for user profiles based on text query and/or skill filtering with paginat
 
 | Parameter | Type | Required | Default | Max | Description |
 |-----------|------|----------|---------|-----|-------------|
-| `q` | string | No | - | - | Text search query (searches in fullName, bio, location) |
+| `q` | string | No | - | - | Text search query (searches in fullName, bio, location, and skills) |
 | `skills` | array<string> | No | - | - | Array of skill IDs to filter by |
 | `page` | integer | No | 1 | - | Page number (minimum: 1) |
 | `limit` | integer | No | 9 | 50 | Profiles per page |
 
 ### Search Criteria
 
-1. **Text Search**: Searches across `fullName`, `bio`, and `location` fields
+1. **Text Search**: Searches across `fullName`, `bio`, `location`, and `skills` (by name) fields
 2. **Skill Filtering**: Matches profiles that have any of the specified skills in either `skillsOffered` or `skillsNeeded`
 
 ### Sorting Priority
@@ -1405,6 +1405,58 @@ Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
 - Maximum limit is 50 profiles per page
 - Minimum page is 1
 - Skill filtering requires valid skill IDs from the `/api/profiles/skills` endpoint
+
+## GET /profiles/:id
+
+Get a single user profile by ID.
+
+- **URL**: `/api/profiles/:id`
+- **Method**: `GET`
+- **Auth Required**: No (Optional)
+
+### Success Response (200 OK)
+
+```json
+{
+  "success": true,
+  "message": "Profile retrieved successfully",
+  "data": {
+    "_id": "60d0fe4f5311236168a109ca",
+    "fullName": "John Doe",
+    "bio": "Full stack developer",
+    "avatar": "https://res.cloudinary.com/...",
+    "mobileNumber": "9876543210",
+    "location": "New York, USA",
+    "rating": 4.5,
+    "contact": { ... },
+    "skillsOffered": [ ... ],
+    "skillsNeeded": [ ... ],
+    "review": [ ... ],
+    "createdAt": "2024-01-01T00:00:00.000Z",
+    "reviewCount": 15,
+    "acceptedRequestsCount": 8
+  }
+}
+```
+
+### Error Responses
+
+**404 Not Found**
+
+| Error Code | Message | Description |
+| :--- | :--- | :--- |
+| `USER_NOT_FOUND` | "Profile not found" | The requested profile ID does not exist. |
+
+**Example Error Response**
+```json
+{
+  "success": false,
+  "error": {
+    "code": "USER_NOT_FOUND",
+    "message": "Profile not found"
+  }
+}
+```
 
 ## Error Codes Reference
 
