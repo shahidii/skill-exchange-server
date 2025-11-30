@@ -12,28 +12,34 @@ const searchProfiles = async ({ userId, query, skills, page = 1, limit = 9 }) =>
 
     // Build search criteria
     const searchCriteria = {};
-    
+
     // Exclude current user if authenticated
     if (userId) {
         searchCriteria._id = { $ne: new mongoose.Types.ObjectId(userId) };
     }
-    
+
     // Text search across multiple fields
     if (query) {
+        // Find skills matching the query
+        const matchingSkills = await Skill.find({ name: { $regex: query, $options: 'i' } }).select('_id');
+        const matchingSkillIds = matchingSkills.map(s => s._id);
+
         searchCriteria.$or = [
             { fullName: { $regex: query, $options: 'i' } },
             { bio: { $regex: query, $options: 'i' } },
-            { location: { $regex: query, $options: 'i' } }
+            { location: { $regex: query, $options: 'i' } },
+            { skillsOffered: { $in: matchingSkillIds } },
+            { skillsNeeded: { $in: matchingSkillIds } }
         ];
     }
-    
+
     // Convert skill IDs to ObjectIds if they are strings
     let skillObjectIds = [];
     if (skills && skills.length > 0) {
-        skillObjectIds = skills.map(skillId => 
+        skillObjectIds = skills.map(skillId =>
             typeof skillId === 'string' ? new mongoose.Types.ObjectId(skillId) : skillId
         );
-        
+
         // If we already have search criteria, add to them
         if (searchCriteria.$or) {
             searchCriteria.$or.push(
@@ -52,7 +58,7 @@ const searchProfiles = async ({ userId, query, skills, page = 1, limit = 9 }) =>
     const basePipeline = [
         // Apply search criteria
         { $match: searchCriteria },
-        
+
         // Add computed fields
         {
             $addFields: {
@@ -73,7 +79,7 @@ const searchProfiles = async ({ userId, query, skills, page = 1, limit = 9 }) =>
                 // Priority for skill matching: skills offered first, then skills needed
                 skillPriority: {
                     $cond: {
-                        if: { 
+                        if: {
                             $and: [
                                 { $gt: [{ $size: { $ifNull: ["$skillsOffered", []] } }, 0] },
                                 { $gt: [skillObjectIds.length || 0, 0] }
@@ -115,7 +121,7 @@ const searchProfiles = async ({ userId, query, skills, page = 1, limit = 9 }) =>
                 }
             }
         },
-        
+
         // Sort by priority: 
         // 1. Skill priority (skills offered first, then skills needed)
         // 2. Rating (high to low)
