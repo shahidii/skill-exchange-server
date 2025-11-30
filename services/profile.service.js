@@ -2,6 +2,29 @@ const profileRepository = require("../repositories/profile.repository");
 const { setJsonWithTtl, getJson } = require("../utils/cache");
 const { formatProfiles } = require("../utils/formatUser");
 
+// Search profiles with pagination
+exports.searchProfiles = async ({ userId, query, skills, page = 1, limit = 9 }) => {
+    try {
+        const result = await profileRepository.searchProfiles({
+            userId,
+            query,
+            skills,
+            page,
+            limit
+        });
+
+        // Format profiles (exclude password and sensitive data)
+        const formattedProfiles = formatProfiles(result.profiles);
+
+        return {
+            profiles: formattedProfiles,
+            pagination: result.pagination
+        };
+    } catch (error) {
+        throw error;
+    }
+};
+
 // Get profiles (up to 9 recommended profiles with pagination)
 exports.getProfiles = async (userId, page = 1, limit = 9) => {
     try {
@@ -85,4 +108,3 @@ exports.getSkills = async (userId, page = 1, limit = 10) => {
         pagination: result.pagination
     };
 };
-

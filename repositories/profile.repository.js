@@ -5,6 +5,181 @@ const Skill = require("../models/Skill");
 // Find user by ID
 const findUserById = (id) => User.findById(id).select('skillsNeeded').lean();
 
+// Search profiles with pagination
+const searchProfiles = async ({ userId, query, skills, page = 1, limit = 9 }) => {
+    // Calculate skip for pagination
+    const skip = (page - 1) * limit;
+
+    // Build search criteria
+    const searchCriteria = {};
+    
+    // Exclude current user if authenticated
+    if (userId) {
+        searchCriteria._id = { $ne: new mongoose.Types.ObjectId(userId) };
+    }
+    
+    // Text search across multiple fields
+    if (query) {
+        searchCriteria.$or = [
+            { fullName: { $regex: query, $options: 'i' } },
+            { bio: { $regex: query, $options: 'i' } },
+            { location: { $regex: query, $options: 'i' } }
+        ];
+    }
+    
+    // Convert skill IDs to ObjectIds if they are strings
+    let skillObjectIds = [];
+    if (skills && skills.length > 0) {
+        skillObjectIds = skills.map(skillId => 
+            typeof skillId === 'string' ? new mongoose.Types.ObjectId(skillId) : skillId
+        );
+        
+        // If we already have search criteria, add to them
+        if (searchCriteria.$or) {
+            searchCriteria.$or.push(
+                { skillsOffered: { $in: skillObjectIds } },
+                { skillsNeeded: { $in: skillObjectIds } }
+            );
+        } else {
+            // Otherwise create new criteria
+            searchCriteria.$or = [
+                { skillsOffered: { $in: skillObjectIds } },
+                { skillsNeeded: { $in: skillObjectIds } }
+            ];
+        }
+    }
+
+    const basePipeline = [
+        // Apply search criteria
+        { $match: searchCriteria },
+        
+        // Add computed fields
+        {
+            $addFields: {
+                // Count accepted requests (handle undefined arrays)
+                acceptedRequestsCount: {
+                    $size: {
+                        $filter: {
+                            input: { $ifNull: ["$requestsReceived", []] },
+                            as: "request",
+                            cond: { $eq: ["$$request.status.status", "accepted"] }
+                        }
+                    }
+                },
+                // Count reviews (handle undefined arrays)
+                reviewCount: {
+                    $size: { $ifNull: ["$review", []] }
+                },
+                // Priority for skill matching: skills offered first, then skills needed
+                skillPriority: {
+                    $cond: {
+                        if: { 
+                            $and: [
+                                { $gt: [{ $size: { $ifNull: ["$skillsOffered", []] } }, 0] },
+                                { $gt: [skillObjectIds.length || 0, 0] }
+                            ]
+                        },
+                        then: {
+                            $cond: {
+                                if: {
+                                    $gt: [{
+                                        $size: {
+                                            $setIntersection: [
+                                                { $ifNull: ["$skillsOffered", []] },
+                                                skillObjectIds
+                                            ]
+                                        }
+                                    }, 0]
+                                },
+                                then: 1, // Skills offered match
+                                else: {
+                                    $cond: {
+                                        if: {
+                                            $gt: [{
+                                                $size: {
+                                                    $setIntersection: [
+                                                        { $ifNull: ["$skillsNeeded", []] },
+                                                        skillObjectIds
+                                                    ]
+                                                }
+                                            }, 0]
+                                        },
+                                        then: 2, // Skills needed match
+                                        else: 3  // No skill match
+                                    }
+                                }
+                            }
+                        },
+                        else: 3 // No skill filtering or no skills offered
+                    }
+                }
+            }
+        },
+        
+        // Sort by priority: 
+        // 1. Skill priority (skills offered first, then skills needed)
+        // 2. Rating (high to low)
+        // 3. Accepted requests count (high to low)
+        // 4. Review count (high to low)
+        // 5. Creation date (most recent first)
+        {
+            $sort: {
+                skillPriority: 1,         // Skills offered first (1), then skills needed (2)
+                rating: -1,               // Highest rating first
+                acceptedRequestsCount: -1, // Most accepted requests first
+                reviewCount: -1,          // Most reviews first
+                createdAt: -1             // Most recent first (tie-breaker)
+            }
+        }
+    ];
+
+    // Get total count (before pagination)
+    const countPipeline = [...basePipeline, { $count: "total" }];
+
+    // Get paginated results
+    const resultsPipeline = [
+        ...basePipeline,
+        { $skip: skip },
+        { $limit: limit },
+
+        // Populate skills
+        {
+            $lookup: {
+                from: 'skills',
+                localField: 'skillsOffered',
+                foreignField: '_id',
+                as: 'skillsOffered'
+            }
+        },
+        {
+            $lookup: {
+                from: 'skills',
+                localField: 'skillsNeeded',
+                foreignField: '_id',
+                as: 'skillsNeeded'
+            }
+        }
+    ];
+
+    // Execute both pipelines in parallel
+    const [countResult, profiles] = await Promise.all([
+        User.aggregate(countPipeline),
+        User.aggregate(resultsPipeline)
+    ]);
+
+    const total = countResult[0]?.total || 0;
+
+    return {
+        profiles,
+        pagination: {
+            page,
+            limit,
+            total,
+            totalPages: Math.ceil(total / limit)
+        }
+    };
+};
+
 // Get skills with pagination
 const getSkills = async ({ userId, userSkillsNeeded = [], userSkillsOffered = [], page = 1, limit = 10 }) => {
     // Calculate skip for pagination
@@ -190,4 +365,4 @@ const getProfiles = async ({ userId, skillsNeeded = [], page = 1, limit = 9 }) =
     };
 };
 
-module.exports = { getProfiles, findUserById, getSkills };
+module.exports = { getProfiles, findUserById, getSkills, searchProfiles };

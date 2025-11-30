@@ -738,3 +738,136 @@
  *                   hasMore: true
  */
 
+/**
+ * @swagger
+ * /profiles/search:
+ *   get:
+ *     summary: Search profiles with text and skill filtering
+ *     description: |
+ *       Search for user profiles based on text query and/or skill filtering with pagination.
+ *       Results are sorted by skill priority (skills offered first, then skills needed), 
+ *       then by rating, accepted requests count, review count, and creation date.
+ *       
+ *       **Search Criteria:**
+ *       - Text search across: fullName, bio, location
+ *       - Skill filtering: matches profiles with skills in skillsOffered or skillsNeeded
+ *       
+ *       **Sorting Priority:**
+ *       1. Skill priority (skills offered = 1, skills needed = 2, no match = 3)
+ *       2. Rating (high to low)
+ *       3. Accepted requests count (high to low)
+ *       4. Review count (high to low)
+ *       5. Creation date (most recent first)
+ *       
+ *       **Pagination:**
+ *       - Default: page=1, limit=9
+ *       - Maximum limit: 50 profiles per page
+ *       
+ *       **Authentication:**
+ *       - Optional: Authenticated users will be excluded from their own search results
+ *     tags: [Profiles]
+ *     parameters:
+ *       - in: query
+ *         name: q
+ *         schema:
+ *           type: string
+ *         description: Text search query (searches in fullName, bio, location)
+ *       - in: query
+ *         name: skills
+ *         schema:
+ *           type: array
+ *           items:
+ *             type: string
+ *         description: Array of skill IDs to filter by
+ *       - in: query
+ *         name: page
+ *         schema:
+ *           type: integer
+ *           minimum: 1
+ *           default: 1
+ *         description: Page number (minimum 1)
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           minimum: 1
+ *           maximum: 50
+ *           default: 9
+ *         description: Number of profiles per page (max 50)
+ *     security:
+ *       - bearerAuth: []
+ *       - {}
+ *     responses:
+ *       200:
+ *         description: Profiles retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 message:
+ *                   type: string
+ *                   example: 'Profiles retrieved successfully'
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     profiles:
+ *                       type: array
+ *                       items:
+ *                         type: object
+ *                         properties:
+ *                           _id:
+ *                             type: string
+ *                           fullName:
+ *                             type: string
+ *                           bio:
+ *                             type: string
+ *                           avatar:
+ *                             type: string
+ *                           mobileNumber:
+ *                             type: string
+ *                           location:
+ *                             type: string
+ *                           rating:
+ *                             type: number
+ *                           skillsOffered:
+ *                             type: array
+ *                             items:
+ *                               type: object
+ *                               properties:
+ *                                 _id:
+ *                                   type: string
+ *                                 name:
+ *                                   type: string
+ *                           skillsNeeded:
+ *                             type: array
+ *                             items:
+ *                               type: object
+ *                               properties:
+ *                                 _id:
+ *                                   type: string
+ *                                 name:
+ *                                   type: string
+ *                           reviewCount:
+ *                             type: integer
+ *                           acceptedRequestsCount:
+ *                             type: integer
+ *                     pagination:
+ *                       type: object
+ *                       properties:
+ *                         page:
+ *                           type: integer
+ *                           example: 1
+ *                         limit:
+ *                           type: integer
+ *                           example: 9
+ *                         total:
+ *                           type: integer
+ *                           example: 51
+ *                         totalPages:
+ *                           type: integer
+ *                           example: 6
+ */

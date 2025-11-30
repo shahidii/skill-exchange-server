@@ -1255,7 +1255,156 @@ GET /api/profiles/skills?page=2&limit=10
 3. **Skill Selection**: Display paginated list of available skills
 4. **Analytics**: Get total count of skills in the platform
 
+---
 
+## GET /profiles/search
+
+Search for user profiles based on text query and/or skill filtering with pagination.
+
+- **URL**: `/api/profiles/search`
+- **Method**: `GET`
+- **Auth Required**: No (Optional - authenticated users excluded from their own results)
+
+### Query Parameters
+
+| Parameter | Type | Required | Default | Max | Description |
+|-----------|------|----------|---------|-----|-------------|
+| `q` | string | No | - | - | Text search query (searches in fullName, bio, location) |
+| `skills` | array<string> | No | - | - | Array of skill IDs to filter by |
+| `page` | integer | No | 1 | - | Page number (minimum: 1) |
+| `limit` | integer | No | 9 | 50 | Profiles per page |
+
+### Search Criteria
+
+1. **Text Search**: Searches across `fullName`, `bio`, and `location` fields
+2. **Skill Filtering**: Matches profiles that have any of the specified skills in either `skillsOffered` or `skillsNeeded`
+
+### Sorting Priority
+
+1. **Skill Priority**:
+   - Skills offered by the profile (priority 1)
+   - Skills needed by the profile (priority 2)
+   - No skill match (priority 3)
+2. **Rating** (high to low)
+3. **Accepted Requests Count** (high to low)
+4. **Review Count** (high to low)
+5. **Creation Date** (most recent first)
+
+### Caching
+
+- **All Requests**: No caching (real-time search results)
+
+### Success Response (200 OK)
+
+```json
+{
+  "success": true,
+  "message": "Profiles retrieved successfully",
+  "data": {
+    "profiles": [
+      {
+        "_id": "60d0fe4f5311236168a109ca",
+        "fullName": "John Doe",
+        "bio": "Full stack developer with 5 years experience",
+        "avatar": "https://res.cloudinary.com/...",
+        "mobileNumber": "9876543210",
+        "location": "New York, USA",
+        "rating": 4.5,
+        "contact": {
+          "businessEmail": "contact@johndoe.com",
+          "linkedIn": "https://linkedin.com/in/johndoe",
+          "instagram": "https://instagram.com/johndoe",
+          "links": [
+            {
+              "name": "Portfolio",
+              "url": "https://johndoe.com"
+            }
+          ]
+        },
+        "skillsOffered": [
+          {
+            "_id": "60d0fe4f5311236168a109cb",
+            "name": "javascript"
+          },
+          {
+            "_id": "60d0fe4f5311236168a109cc",
+            "name": "react"
+          }
+        ],
+        "skillsNeeded": [
+          {
+            "_id": "60d0fe4f5311236168a109cd",
+            "name": "python"
+          }
+        ],
+        "review": [
+          {
+            "_id": "60d0fe4f5311236168a109ce",
+            "user": "60d0fe4f5311236168a109cf",
+            "rating": 5,
+            "comment": "Great teacher!",
+            "createdAt": "2024-01-15T10:30:00.000Z"
+          }
+        ],
+        "createdAt": "2024-01-01T00:00:00.000Z",
+        "reviewCount": 15,
+        "acceptedRequestsCount": 8
+      }
+      // ... 8 more profiles
+    ],
+    "pagination": {
+      "page": 1,
+      "limit": 9,
+      "total": 51,
+      "totalPages": 6
+    }
+  }
+}
+```
+
+### Example Requests
+
+**Text Search:**
+```bash
+GET /api/profiles/search?q=developer
+```
+
+**Skill Filtering:**
+```bash
+GET /api/profiles/search?skills[]=60d0fe4f5311236168a109cb&skills[]=60d0fe4f5311236168a109cc
+```
+
+**Combined Search with Pagination:**
+```bash
+GET /api/profiles/search?q=javascript&skills[]=60d0fe4f5311236168a109cb&page=1&limit=9
+```
+
+**With Authentication (Excludes Current User):**
+```bash
+GET /api/profiles/search?q=developer
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+```
+
+### Response Fields
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `profiles` | array | Array of profile objects |
+| `profiles[].reviewCount` | integer | Calculated count of reviews |
+| `profiles[].acceptedRequestsCount` | integer | Calculated count of accepted requests |
+| `pagination.page` | integer | Current page number |
+| `pagination.limit` | integer | Profiles per page |
+| `pagination.total` | integer | Total number of profiles matching the search criteria |
+| `pagination.totalPages` | integer | Total number of pages |
+
+### Notes
+
+- Profiles are sorted by skill priority first (skills offered before skills needed)
+- Authenticated users are automatically excluded from their own search results
+- No caching is applied to search results to ensure real-time data
+- Maximum limit is 50 profiles per page
+- Minimum page is 1
+- Skill filtering requires valid skill IDs from the `/api/profiles/skills` endpoint
 
 ## Error Codes Reference
 
