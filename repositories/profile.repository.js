@@ -6,12 +6,54 @@ const Skill = require("../models/Skill");
 const findUserById = (id) => User.findById(id).select('skillsNeeded skillsOffered').lean();
 
 // Get single profile by ID with populated skills
+// Get single profile by ID with populated skills and computed stats
 const getProfileById = async (id) => {
-    return await User.findById(id)
-        .select('-password')
-        .populate('skillsOffered')
-        .populate('skillsNeeded')
-        .lean();
+    const pipeline = [
+        { $match: { _id: new mongoose.Types.ObjectId(id) } },
+        {
+            $addFields: {
+                // Count accepted requests (handle undefined arrays)
+                acceptedRequestsCount: {
+                    $size: {
+                        $filter: {
+                            input: { $ifNull: ["$requestsReceived", []] },
+                            as: "request",
+                            cond: { $eq: ["$$request.status.status", "accepted"] }
+                        }
+                    }
+                },
+                // Count reviews (handle undefined arrays)
+                reviewCount: {
+                    $size: { $ifNull: ["$review", []] }
+                }
+            }
+        },
+        {
+            $project: {
+                password: 0 // Exclude password
+            }
+        },
+        // Populate skills
+        {
+            $lookup: {
+                from: 'skills',
+                localField: 'skillsOffered',
+                foreignField: '_id',
+                as: 'skillsOffered'
+            }
+        },
+        {
+            $lookup: {
+                from: 'skills',
+                localField: 'skillsNeeded',
+                foreignField: '_id',
+                as: 'skillsNeeded'
+            }
+        }
+    ];
+
+    const result = await User.aggregate(pipeline);
+    return result[0];
 };
 
 // Search profiles with pagination
