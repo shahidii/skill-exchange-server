@@ -1,22 +1,22 @@
 // utils/formatUser.js
 function formatUser(user) {
-  if (!user) return null;
+    if (!user) return null;
 
-  return {
-    _id: user._id,
-    fullName: user.fullName,
-    email: user.email,
-    mobileNumber: user.mobileNumber,
-    skillsOffered: user.skillsOffered?.map(skill => ({
-      _id: skill._id,
-      name: skill.name
-    })),
-    skillsNeeded: user.skillsNeeded?.map(skill => ({
-      _id: skill._id,
-      name: skill.name
-    })),
-    // createdAt: user.createdAt // optional, include only if useful for client
-  };
+    return {
+        _id: user._id,
+        fullName: user.fullName,
+        email: user.email,
+        mobileNumber: user.mobileNumber,
+        skillsOffered: user.skillsOffered?.map(skill => ({
+            _id: skill._id,
+            name: skill.name
+        })),
+        skillsNeeded: user.skillsNeeded?.map(skill => ({
+            _id: skill._id,
+            name: skill.name
+        })),
+        // createdAt: user.createdAt // optional, include only if useful for client
+    };
 }
 
 function formatProfile(user) {
@@ -56,12 +56,18 @@ function formatProfile(user) {
         })),
         review: user.review?.map(review => ({
             _id: review._id,
-            user: review.user,
+            user: review.user && review.user._id ? {
+                _id: review.user._id,
+                fullName: review.user.fullName,
+                avatar: review.user.avatar
+            } : review.user,
             rating: review.rating,
             comment: review.comment,
             createdAt: review.createdAt
         })),
         rating: user.rating,
+        reviewCount: user.reviewCount, // Added for pagination
+        acceptedRequestsCount: user.acceptedRequestsCount, // Added for stats
         createdAt: user.createdAt // optional, include only if useful for client
     };
 }
@@ -86,7 +92,11 @@ function formatProfiles(profiles) {
         })),
         review: user.review?.map(review => ({
             _id: review._id,
-            user: review.user,
+            user: review.user && review.user._id ? {
+                _id: review.user._id,
+                fullName: review.user.fullName,
+                avatar: review.user.avatar
+            } : review.user,
             rating: review.rating,
             comment: review.comment,
             createdAt: review.createdAt
@@ -98,5 +108,5 @@ function formatProfiles(profiles) {
     }));
 }
 
-    
+
 module.exports = { formatUser, formatProfile, formatProfiles };
