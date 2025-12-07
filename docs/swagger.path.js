@@ -910,3 +910,139 @@
  *               UserNotFound:
  *                 value: { success: false, error: { code: 'USER_NOT_FOUND', message: 'Profile not found' } }
  */
+/**
+ * @swagger
+ * /profiles/{id}:
+ *   get:
+ *     summary: Get profile by ID
+ *     tags: [Profiles]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: User ID
+ *       - in: query
+ *         name: reviewSort
+ *         schema:
+ *           type: string
+ *           enum: [highest, lowest, newest, oldest, my-review]
+ *           default: highest
+ *         description: Sort order for reviews
+ *     security:
+ *       - bearerAuth: []
+ *       - {}
+ *     responses:
+ *       200:
+ *         description: Profile retrieved
+ *         content:
+ *           application/json:
+ *             schema:
+ *               allOf:
+ *                 - $ref: '#/components/schemas/Success'
+ *                 - type: object
+ *                   properties:
+ *                     data:
+ *                       type: object
+ *                       properties:
+ *                         user: { $ref: '#/components/schemas/Profile' }
+ *       404:
+ *         description: Not Found
+ *         content:
+ *           application/json:
+ *             schema: { $ref: '#/components/schemas/Error' }
+ *             example:
+ *               value: { success: false, error: { code: 'USER_NOT_FOUND', message: 'Profile not found' } }
+ */
+
+/**
+ * @swagger
+ * /profiles/{id}/reviews:
+ *   post:
+ *     summary: Add a review
+ *     tags: [Profiles]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: User ID to review
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [rating, comment]
+ *             properties:
+ *               rating: { type: integer, minimum: 1, maximum: 5 }
+ *               comment: { type: string }
+ *     responses:
+ *       201:
+ *         description: Review added
+ *         content:
+ *           application/json:
+ *             schema:
+ *               allOf:
+ *                 - $ref: '#/components/schemas/Success'
+ *                 - type: object
+ *                   properties:
+ *                     message: { type: string, example: 'Review added successfully' }
+ *       400:
+ *         description: Validation Error
+ *         content:
+ *           application/json:
+ *             schema: { $ref: '#/components/schemas/Error' }
+ *             examples:
+ *               ValidationError:
+ *                 value: { success: false, error: { code: 'VALIDATION_ERROR', message: 'Rating and comment are required' } }
+ *               SelfReview:
+ *                 value: { success: false, error: { code: 'SELF_REVIEW', message: 'You cannot review your own profile' } }
+ *               ReviewExists:
+ *                 value: { success: false, error: { code: 'REVIEW_EXISTS', message: 'Review already exists, please delete first' } }
+ *       404:
+ *         description: Profile Not Found
+ *         content:
+ *           application/json:
+ *             schema: { $ref: '#/components/schemas/Error' }
+ *             example:
+ *               value: { success: false, error: { code: 'USER_NOT_FOUND', message: 'Profile not found' } }
+ *
+ *   delete:
+ *     summary: Delete a review
+ *     tags: [Profiles]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: User ID to remove review from
+ *     responses:
+ *       200:
+ *         description: Review deleted
+ *         content:
+ *           application/json:
+ *             schema:
+ *               allOf:
+ *                 - $ref: '#/components/schemas/Success'
+ *                 - type: object
+ *                   properties:
+ *                     message: { type: string, example: 'Review deleted successfully' }
+ *       404:
+ *         description: Not Found
+ *         content:
+ *           application/json:
+ *             schema: { $ref: '#/components/schemas/Error' }
+ *             examples:
+ *               ProfileNotFound:
+ *                 value: { success: false, error: { code: 'USER_NOT_FOUND', message: 'Profile not found' } }
+ *               ReviewNotFound:
+ *                 value: { success: false, error: { code: 'REVIEW_NOT_FOUND', message: 'Review not found' } }
+ */

@@ -1480,3 +1480,121 @@ Get a single user profile by ID.
 | `INVALID_URL` | 400 | Invalid URL format |
 | `NO_FILE_UPLOADED` | 400 | File upload required but not provided |
 | `INVALID_FILE_TYPE` | 400 | Unsupported file type |
+### 12. Get Profile by ID
+Retrieve a single user profile by their ID. This provides detailed information about a specific user, including their stats and reviews.
+
+- **URL**: `/profiles/:id`
+- **Method**: `GET`
+- **Auth Required**: Public (Optional Auth)
+- **Content-Type**: `application/json`
+
+#### Query Parameters
+| Field | Type | Description |
+| :--- | :--- | :--- |
+| `reviewSort` | String | Sort reviews by: `highest`, `lowest`, `newest`, `oldest`, or `my-review` (authenticated only). Default: `highest`. |
+
+#### Success Response (200 OK)
+Returns the detailed profile object with computed statistics.
+
+```json
+{
+  "success": true,
+  "message": "Profile retrieved successfully",
+  "data": {
+    "_id": "60d0fe...",
+    "fullName": "Jane Doe",
+    "bio": "Expert Designer",
+    "reviewCount": 15,
+    "acceptedRequestsCount": 5,
+    "rating": 4.8,
+    "review": [
+       {
+         "user": { "fullName": "John", "avatar": "..." },
+         "rating": 5,
+         "comment": "Great work!",
+         "createdAt": "2023-01-01T10:00:00Z"
+       }
+    ]
+  }
+}
+```
+
+#### Error Responses
+
+**404 Not Found**
+| Error Code | Message | Description |
+| :--- | :--- | :--- |
+| `USER_NOT_FOUND` | "Profile not found" | No user exists with the provided ID. |
+
+---
+
+### 13. Add Review
+Add a review to a user's profile.
+
+- **URL**: `/profiles/:id/reviews`
+- **Method**: `POST`
+- **Auth Required**: Yes (Bearer Token)
+- **Content-Type**: `application/json`
+
+#### Request Body Parameters
+| Field | Type | Required | Description |
+| :--- | :--- | :--- | :--- |
+| `rating` | Number | Yes | Rating 1-5. |
+| `comment` | String | Yes | Review text. |
+
+#### Request Example
+```json
+{
+  "rating": 5,
+  "comment": "Excellent mentor!"
+}
+```
+
+#### Success Response (201 Created)
+Returns a success message.
+
+```json
+{
+  "success": true,
+  "message": "Review added successfully"
+}
+```
+
+#### Error Responses
+**400 Bad Request**
+| Error Code | Message | Description |
+| :--- | :--- | :--- |
+| `VALIDATION_ERROR` | "Rating and comment are required" | Missing fields. |
+| `SELF_REVIEW` | "You cannot review your own profile" | User tried to review themselves. |
+| `REVIEW_EXISTS` | "Review already exists, please delete first" | User has already left a review for this profile. |
+
+**404 Not Found**
+| Error Code | Message | Description |
+| :--- | :--- | :--- |
+| `USER_NOT_FOUND` | "Profile not found" | Target user does not exist. |
+
+---
+
+### 14. Delete Review
+Remove your review from a user's profile.
+
+- **URL**: `/profiles/:id/reviews`
+- **Method**: `DELETE`
+- **Auth Required**: Yes (Bearer Token)
+
+#### Success Response (200 OK)
+Returns a success message.
+
+```json
+{
+  "success": true,
+  "message": "Review deleted successfully"
+}
+```
+
+#### Error Responses
+**404 Not Found**
+| Error Code | Message | Description |
+| :--- | :--- | :--- |
+| `USER_NOT_FOUND` | "Profile not found" | Target user does not exist. |
+| `REVIEW_NOT_FOUND` | "Review not found" | You have not reviewed this user. |
