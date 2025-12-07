@@ -72,8 +72,10 @@ exports.getSkills = asyncHandler(async (req, res) => {
 // @access  Public
 exports.getProfileById = asyncHandler(async (req, res) => {
     const { id } = req.params;
+    const { reviewSort } = req.query; // 'highest', 'lowest', 'newest', 'oldest', 'my-review'
+    const currentUserId = req.user?.id; // Optional, for 'my-review' sort
 
-    const profile = await profileService.getProfileById(id);
+    const profile = await profileService.getProfileById(id, reviewSort, currentUserId);
 
     if (!profile) {
         res.status(404);
@@ -84,5 +86,41 @@ exports.getProfileById = asyncHandler(async (req, res) => {
         success: true,
         message: 'Profile retrieved successfully',
         data: profile
+    });
+});
+
+// @desc    Add a review to a profile
+// @route   POST /api/profiles/:id/reviews
+// @access  Private
+exports.addReview = asyncHandler(async (req, res) => {
+    const { id } = req.params;
+    const { rating, comment } = req.body;
+    const userId = req.user.id;
+
+    if (!rating || !comment) {
+        res.status(400);
+        throw new Error('Rating and comment are required');
+    }
+
+    await profileService.addReview(id, userId, { rating, comment });
+
+    res.status(201).json({
+        success: true,
+        message: 'Review added successfully'
+    });
+});
+
+// @desc    Delete own review from a profile
+// @route   DELETE /api/profiles/:id/reviews
+// @access  Private
+exports.deleteReview = asyncHandler(async (req, res) => {
+    const { id } = req.params; // Profile ID
+    const userId = req.user.id;
+
+    await profileService.deleteReview(id, userId);
+
+    res.status(200).json({
+        success: true,
+        message: 'Review deleted successfully'
     });
 });

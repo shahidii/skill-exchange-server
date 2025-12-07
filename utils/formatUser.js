@@ -16,6 +16,8 @@ function formatUser(user) {
             name: skill.name
         })),
         // createdAt: user.createdAt // optional, include only if useful for client
+        // createdAt: user.createdAt // optional, include only if useful for client
+        reviewCount: user.review ? user.review.length : 0 // Add review count for basic user object if needed, though mostly profile uses formatProfile
     };
 }
 

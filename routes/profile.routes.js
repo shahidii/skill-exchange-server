@@ -1,7 +1,7 @@
 const express = require("express");
 const router = express.Router();
 const profileController = require("../controllers/profile.controller");
-const { optionalAuth } = require("../middleware/auth.middleware");
+const { optionalAuth, authenticate } = require("../middleware/auth.middleware");
 
 // @route    GET /api/profiles/skills
 // @desc     Get all skills with pagination (for dropdown infinite scroll)
@@ -22,5 +22,15 @@ router.get("/", optionalAuth, profileController.getProfiles);
 // @desc     Get single profile by ID
 // @access   Public
 router.get("/:id", optionalAuth, profileController.getProfileById);
+
+// @route    POST /api/profiles/:id/reviews
+// @desc     Add a review
+// @access   Private
+router.post("/:id/reviews", authenticate, profileController.addReview);
+
+// @route    DELETE /api/profiles/:id/reviews
+// @desc     Delete a review
+// @access   Private
+router.delete("/:id/reviews", authenticate, profileController.deleteReview);
 
 module.exports = router;

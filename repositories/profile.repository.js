@@ -2,58 +2,37 @@ const mongoose = require('mongoose');
 const User = require("../models/User");
 const Skill = require("../models/Skill");
 
-// Find user by ID (internal use)
-const findUserById = (id) => User.findById(id).select('skillsNeeded skillsOffered').lean();
+// Find user by ID (internal use) -> Must include review for duplicate check!
+const findUserById = (id) => User.findById(id).select('-password').lean();
 
 // Get single profile by ID with populated skills
 // Get single profile by ID with populated skills and computed stats
+// Get single profile by ID with populated skills and computed stats
 const getProfileById = async (id) => {
-    const pipeline = [
-        { $match: { _id: new mongoose.Types.ObjectId(id) } },
-        {
-            $addFields: {
-                // Count accepted requests (handle undefined arrays)
-                acceptedRequestsCount: {
-                    $size: {
-                        $filter: {
-                            input: { $ifNull: ["$requestsReceived", []] },
-                            as: "request",
-                            cond: { $eq: ["$$request.status.status", "accepted"] }
-                        }
-                    }
-                },
-                // Count reviews (handle undefined arrays)
-                reviewCount: {
-                    $size: { $ifNull: ["$review", []] }
-                }
-            }
-        },
-        {
-            $project: {
-                password: 0 // Exclude password
-            }
-        },
-        // Populate skills
-        {
-            $lookup: {
-                from: 'skills',
-                localField: 'skillsOffered',
-                foreignField: '_id',
-                as: 'skillsOffered'
-            }
-        },
-        {
-            $lookup: {
-                from: 'skills',
-                localField: 'skillsNeeded',
-                foreignField: '_id',
-                as: 'skillsNeeded'
-            }
-        }
-    ];
+    try {
+        const user = await User.findById(id)
+            .select('-password')
+            .populate('skillsOffered')
+            .populate('skillsNeeded')
+            .populate({
+                path: 'review.user',
+                select: 'fullName avatar'
+            })
+            .lean();
 
-    const result = await User.aggregate(pipeline);
-    return result[0];
+        if (!user) return null;
+
+        // Calculate computed fields manually since we're not using aggregation
+        user.reviewCount = user.review ? user.review.length : 0;
+        user.acceptedRequestsCount = user.requestsReceived
+            ? user.requestsReceived.filter(r => r.status && r.status.status === 'accepted').length
+            : 0;
+
+        return user;
+    } catch (error) {
+        console.error("Error in getProfileById:", error);
+        throw error;
+    }
 };
 
 // Search profiles with pagination

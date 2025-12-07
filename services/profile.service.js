@@ -109,13 +109,170 @@ exports.getSkills = async (userId, page = 1, limit = 10) => {
     };
 };
 
+// Add a review
+exports.addReview = async (profileId, userId, { rating, comment }) => {
+    try {
+        const user = await profileRepository.findUserById(profileId);
+        if (!user) {
+            const error = new Error('Profile not found');
+            error.statusCode = 404;
+            throw error;
+        }
+
+        if (profileId === userId) {
+            const error = new Error('You cannot review your own profile');
+            error.statusCode = 400;
+            throw error;
+        }
+
+        // Check if user already reviewed
+        // Convert to strings for reliable comparison whether populated or not
+        const alreadyReviewed = user.review?.find(
+            (r) => {
+                if (!r.user) return false; // Skip invalid reviews
+                const reviewUserId = r.user._id ? r.user._id.toString() : r.user.toString();
+                // console.log(`[DEBUG] Comparing ${reviewUserId} with ${userId.toString()}`);
+                return reviewUserId === userId.toString();
+            }
+        );
+
+        if (alreadyReviewed) {
+            const error = new Error('Review already exists, please delete first');
+            error.statusCode = 400;
+            throw error;
+        }
+
+        const review = {
+            user: userId,
+            rating: Number(rating),
+            comment,
+            createdAt: Date.now()
+        };
+
+        // Use atomic update to push review
+        const User = require("../models/User"); // Import model directly for atomic update if repo doesn't support it
+        // Or better, add update method to repo. usage here suggests service interacting with model is pattern used properly via repo?
+        // existing repo has findUserById but not updateUser.
+        // I will use mongoose model directly here for simplicity or add to repo.
+        // Let's use direct model update since repo is limited.
+
+        await User.findByIdAndUpdate(profileId, {
+            $push: { review: review }
+        });
+
+        // Recalculate average rating
+        // Fetch fresh user data with reviews
+        const updatedUser = await User.findById(profileId);
+        if (updatedUser.review.length > 0) {
+            updatedUser.rating =
+                updatedUser.review.reduce((acc, item) => item.rating + acc, 0) /
+                updatedUser.review.length;
+        } else {
+            updatedUser.rating = 0;
+        }
+        await updatedUser.save();
+
+        return true;
+    } catch (error) {
+        throw error;
+    }
+};
+
+// Delete a review
+exports.deleteReview = async (profileId, userId) => {
+    try {
+        const User = require("../models/User");
+
+        const user = await User.findById(profileId);
+        if (!user) {
+            const error = new Error('Profile not found');
+            error.statusCode = 404;
+            throw error;
+        }
+
+        // Check if review exists
+        const reviewExists = user.review?.find(
+            (r) => r.user.toString() === userId.toString() || (r.user._id && r.user._id.toString() === userId.toString())
+        );
+
+        if (!reviewExists) {
+            const error = new Error('Review not found');
+            error.statusCode = 404;
+            throw error;
+        }
+
+        // Pull the review
+        await User.findByIdAndUpdate(profileId, {
+            $pull: { review: { user: userId } }
+        });
+
+        // Recalculate average rating
+        const updatedUser = await User.findById(profileId);
+        if (updatedUser.review && updatedUser.review.length > 0) {
+            updatedUser.rating =
+                updatedUser.review.reduce((acc, item) => item.rating + acc, 0) /
+                updatedUser.review.length;
+        } else {
+            updatedUser.rating = 0;
+        }
+        await updatedUser.save();
+
+        return true;
+    } catch (error) {
+        throw error;
+    }
+};
+
+// Helper to sort reviews
+const sortReviews = (reviews, sortOption, currentUserId) => {
+    if (!reviews) return [];
+
+    // Create a copy to avoid mutating original
+    const sortedReviews = [...reviews];
+
+    switch (sortOption) {
+        case 'highest':
+            return sortedReviews.sort((a, b) => b.rating - a.rating);
+        case 'lowest':
+            return sortedReviews.sort((a, b) => a.rating - b.rating);
+        case 'newest':
+            return sortedReviews.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+        case 'oldest':
+            return sortedReviews.sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt));
+        case 'my-review':
+            if (!currentUserId) return sortedReviews;
+            // Filter mode: Show ONLY my review
+            // Or Sort mode: Put mine first
+            // User complaint: "showing not only my reviw showing all reviews why ?"
+            // Interpretation: User wants FILTERING.
+            // We will Filter here.
+            return sortedReviews.filter(r => {
+                if (!r.user) return false; // Skip invalid
+                const rUserId = r.user._id ? r.user._id.toString() : r.user.toString();
+                return rUserId === currentUserId.toString();
+            });
+        default:
+            return sortedReviews.sort((a, b) => b.rating - a.rating); // Default to highest
+    }
+};
+
 // Get single profile by ID
-exports.getProfileById = async (id) => {
+exports.getProfileById = async (id, reviewSort = 'highest', currentUserId = null) => {
     try {
         const profile = await profileRepository.getProfileById(id);
 
         if (!profile) {
             return null;
+        }
+
+        // Sort reviews if present (data is already populated by repo now)
+        if (profile.review && profile.review.length > 0) {
+            // We need to apply sorting on the raw profile object before formatting
+            // But wait, profile returned from repo is a POJO (Project Object) because of aggregation.
+            // We can modify it directly.
+            // Note: review.user is populated now.
+
+            profile.review = sortReviews(profile.review, reviewSort, currentUserId);
         }
 
         // Format profile (exclude password and sensitive data if any remains)

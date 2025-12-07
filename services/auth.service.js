@@ -276,7 +276,7 @@ exports.updateEmail = async ({ currentEmail, newEmail }) => {
 };
 
 // Get user profile
-exports.getProfile = async (userId) => {
+exports.getProfile = async (userId, reviewSort = 'highest') => {
     try {
         const user = await authRepository.findUserById(userId);
         if (!user) {
@@ -285,6 +285,43 @@ exports.getProfile = async (userId) => {
             error.statusCode = 401;
             throw error;
         }
+
+        // Sort reviews if present (reviews are populated by repo now)
+        if (user.review && user.review.length > 0) {
+            // Helper to sort (duplicated from profile.service.js, effectively)
+            // Ideally should be a utility but fine here for now
+            const sortedReviews = [...user.review];
+            switch (reviewSort) {
+                case 'highest':
+                    sortedReviews.sort((a, b) => b.rating - a.rating);
+                    break;
+                case 'lowest':
+                    sortedReviews.sort((a, b) => a.rating - b.rating);
+                    break;
+                case 'newest':
+                    sortedReviews.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+                    break;
+                case 'oldest':
+                    sortedReviews.sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt));
+                    break;
+                case 'my-review':
+                    // For own profile, "my review" likely implies "Reviews I wrote" which are not in 'user.review' (those are reviews ABOUT me).
+                    // But if consistent with other logic, it might mean "Reviews by me about me" (impossible).
+                    // Or it means "Reviews I wrote about OTHERS".
+                    // But user.review contains reviews received.
+                    // So 'my-review' on own profile is practically empty or nonsensical unless I reviewed myself (blocked).
+                    // We will just return empty array or ignore.
+                    // Let's filter to empty to be safe/consistent with "My Review" meaning "Review by current user".
+                    user.review = [];
+                    break;
+                default:
+                    sortedReviews.sort((a, b) => b.rating - a.rating);
+            }
+            if (reviewSort !== 'my-review') {
+                user.review = sortedReviews;
+            }
+        }
+
         return { user: formatProfile(user) };
     } catch (error) {
         throw error;

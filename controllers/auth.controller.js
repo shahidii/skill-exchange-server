@@ -80,16 +80,16 @@ exports.updateEmail = asyncHandler(async (req, res) => {
     });
 });
 
-// @desc    Get user profile
-// @route   GET /api/auth/profile
+// @desc    Get current user profile
+// @route   GET /api/user/profile
 // @access  Private
 exports.getProfile = asyncHandler(async (req, res) => {
-    const { user } = await authService.getProfile(req.user.id);
-
+    const { reviewSort } = req.query;
+    const result = await authService.getProfile(req.user.id, reviewSort);
     res.status(200).json({
         success: true,
         message: 'User profile retrieved successfully',
-        data: { user }
+        data: result
     });
 });
 
