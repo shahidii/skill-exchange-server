@@ -33,4 +33,9 @@ router.post("/:id/reviews", authenticate, profileController.addReview);
 // @access   Private
 router.delete("/:id/reviews", authenticate, profileController.deleteReview);
 
+// @route    POST /api/profiles/:id/request
+// @desc     Request a skill
+// @access   Private
+router.post("/:id/request", authenticate, profileController.requestSkill);
+
 module.exports = router;

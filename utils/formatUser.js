@@ -46,6 +46,7 @@ function formatProfile(user) {
             skill: request.skill,
             status: request.status,
             message: request.message,
+            seen: request.seen,
             createdAt: request.createdAt
         })),
         requestsSent: user.requestsSent?.map(request => ({
@@ -54,6 +55,7 @@ function formatProfile(user) {
             skill: request.skill,
             status: request.status,
             message: request.message,
+            seen: request.seen,
             createdAt: request.createdAt
         })),
         review: user.review?.map(review => ({

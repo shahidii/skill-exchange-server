@@ -135,3 +135,55 @@ exports.updateAvatar = asyncHandler(async (req, res) => {
         data: { user, updatedFields }
     });
 });
+
+// @desc    Update Request Status (Accept/Decline)
+// @route   POST /api/auth/requests/:requestId
+// @access  Private
+exports.updateRequestStatus = asyncHandler(async (req, res) => {
+    const { requestId } = req.params;
+    const { status, message } = req.body;
+    const userId = req.user.id;
+
+    await authService.updateRequestStatus(userId, requestId, status, message);
+
+    res.status(200).json({
+        success: true,
+        message: `Request ${status} successfully`
+    });
+});
+
+// @desc    Mark Requests as Seen
+// @route   POST /api/auth/requests/seen
+// @access  Private
+exports.markRequestsSeen = asyncHandler(async (req, res) => {
+    const { type } = req.body; // 'incoming' or 'my'
+    const userId = req.user.id;
+
+    await authService.markRequestsSeen(userId, type);
+
+    res.status(200).json({
+        success: true,
+        message: 'Requests marked as seen'
+    });
+});
+
+// @desc    Delete or Unsend Request
+// @route   DELETE /api/auth/requests/:requestId
+// @access  Private
+exports.deleteRequest = asyncHandler(async (req, res) => {
+    const { requestId } = req.params;
+    const { action } = req.query; // 'unsend' or 'delete'
+    const userId = req.user.id;
+
+    if (!action) {
+        res.status(400);
+        throw new Error('Action query parameter (unsend/delete) is required');
+    }
+
+    await authService.deleteRequest(userId, requestId, action);
+
+    res.status(200).json({
+        success: true,
+        message: action === 'unsend' ? 'Request unsent successfully' : 'Request deleted from history'
+    });
+});

@@ -278,13 +278,22 @@ exports.updateEmail = async ({ currentEmail, newEmail }) => {
 // Get user profile
 exports.getProfile = async (userId, reviewSort = 'highest') => {
     try {
-        const user = await authRepository.findUserById(userId);
+        let user = await authRepository.findUserById(userId);
         if (!user) {
             const error = new Error('User not found');
             error.code = 'INVALID_CREDENTIALS';
             error.statusCode = 401;
             throw error;
         }
+
+        // Convert to plain object to allow adding computed fields
+        // This ensures properties like acceptedRequestsCount work even if not in schema
+        user = user.toObject();
+
+        // Calculate accepted requests count manually
+        user.acceptedRequestsCount = user.requestsReceived
+            ? user.requestsReceived.filter(r => r.status && r.status.status === 'accepted').length
+            : 0;
 
         // Sort reviews if present (reviews are populated by repo now)
         if (user.review && user.review.length > 0) {
@@ -654,6 +663,190 @@ exports.updateContact = async (userId, body) => {
 
 
         return { user: formatProfile(updatedUser), updatedFields };
+    } catch (error) {
+        throw error;
+    }
+};
+
+
+// Update Request Status (Accept/Decline)
+exports.updateRequestStatus = async (userId, requestId, status, message) => {
+    try {
+        const User = require("../models/User");
+        if (!['accepted', 'declined'].includes(status)) {
+            const error = new Error('Invalid status');
+            error.statusCode = 400;
+            throw error;
+        }
+
+        const currentUser = await User.findById(userId);
+
+        // Find the request in requestsReceived
+        const receivedReqHandler = currentUser.requestsReceived.id(requestId);
+
+        if (!receivedReqHandler) {
+            const error = new Error('Request not found');
+            error.statusCode = 404;
+            throw error;
+        }
+
+        // Check if already responded
+        if (receivedReqHandler.status.status !== 'pending') {
+            const error = new Error('Request already processed');
+            error.statusCode = 400;
+            throw error;
+        }
+
+        // Update Receiver's copy
+        receivedReqHandler.status = { status, message: message || '' };
+        // We can keep 'seen' as is (receiver is acting on it, so they have seen it) or ensure it's true.
+        receivedReqHandler.seen = true;
+
+        // Find and Update Sender's copy
+        const senderId = receivedReqHandler.user;
+        const senderUser = await User.findById(senderId);
+
+        if (senderUser) {
+            const sentReqHandler = senderUser.requestsSent.id(requestId);
+            if (sentReqHandler) {
+                sentReqHandler.status = { status, message: message || '' };
+                // CRITICAL: Trigger notification for sender
+                sentReqHandler.seen = false;
+            }
+            await senderUser.save();
+        }
+
+        await currentUser.save();
+        return true;
+    } catch (error) {
+        throw error;
+    }
+};
+
+// Mark requests as seen
+exports.markRequestsSeen = async (userId, type) => {
+    try {
+        const User = require("../models/User");
+        const user = await User.findById(userId);
+
+        if (!user) {
+            const error = new Error('User not found');
+            error.statusCode = 404;
+            throw error;
+        }
+
+        let updated = false;
+
+        if (type === 'incoming') {
+            user.requestsReceived.forEach(req => {
+                if (!req.seen) {
+                    req.seen = true;
+                    updated = true;
+                }
+            });
+        } else if (type === 'my') {
+            user.requestsSent.forEach(req => {
+                // Only mark as seen if it's NOT pending (meaning it has a reply)
+                // Actually, for 'my' requests, 'seen=false' means there is an update (reply).
+                // So we check !req.seen.
+                if (!req.seen) {
+                    req.seen = true;
+                    updated = true;
+                }
+            });
+        }
+
+        if (updated) {
+            await user.save();
+        }
+        return true;
+    } catch (error) {
+        throw error;
+    }
+};
+
+// Delete or Unsend Request
+exports.deleteRequest = async (userId, requestId, action) => {
+    try {
+        const User = require("../models/User");
+        const currentUser = await User.findById(userId);
+
+        if (!currentUser) {
+            const error = new Error('User not found');
+            error.statusCode = 404;
+            throw error;
+        }
+
+        if (action === 'unsend') {
+            // "Unsend" logic: Remove from BOTH users.
+            // Requirement: Only allowed if status is 'pending' and user is the sender.
+
+            const sentReq = currentUser.requestsSent.id(requestId);
+            if (!sentReq) {
+                const error = new Error('Request not found in your sent list');
+                error.statusCode = 404;
+                throw error;
+            }
+
+            if (sentReq.status.status !== 'pending') {
+                const error = new Error('Cannot unsend a processed request');
+                error.statusCode = 400;
+                throw error;
+            }
+
+            // Remove from Sender (Current User)
+            currentUser.requestsSent.pull(requestId);
+
+            // Remove from Receiver
+            const receiverId = sentReq.user;
+            const receiverUser = await User.findById(receiverId);
+            if (receiverUser) {
+                receiverUser.requestsReceived.pull(requestId);
+                await receiverUser.save();
+            }
+
+            await currentUser.save();
+
+        } else if (action === 'delete') {
+            // "Delete" logic: Remove from HISTORY (Current user only).
+            // Allowed if status is accepted/declined.
+
+            // Check in Sent
+            const sentReq = currentUser.requestsSent.id(requestId);
+            if (sentReq) {
+                if (sentReq.status.status === 'pending') {
+                    const error = new Error('Cannot delete a pending request from history');
+                    error.statusCode = 400;
+                    throw error;
+                }
+                currentUser.requestsSent.pull(requestId);
+            }
+            // Check in Received (if not found in Sent, or maybe check both? ID should be unique)
+            else {
+                const receivedReq = currentUser.requestsReceived.id(requestId);
+                if (receivedReq) {
+                    if (receivedReq.status.status === 'pending') {
+                        const error = new Error('Cannot delete a pending request from history. Accept or Decline it first.');
+                        error.statusCode = 400;
+                        throw error;
+                    }
+                    currentUser.requestsReceived.pull(requestId);
+                } else {
+                    const error = new Error('Request not found');
+                    error.statusCode = 404;
+                    throw error;
+                }
+            }
+
+            await currentUser.save();
+        } else {
+            const error = new Error('Invalid action');
+            error.statusCode = 400;
+            throw error;
+        }
+
+        return true;
+
     } catch (error) {
         throw error;
     }

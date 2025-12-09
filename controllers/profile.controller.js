@@ -124,3 +124,24 @@ exports.deleteReview = asyncHandler(async (req, res) => {
         message: 'Review deleted successfully'
     });
 });
+
+// @desc    Request a skill
+// @route   POST /api/profiles/:id/request
+// @access  Private
+exports.requestSkill = asyncHandler(async (req, res) => {
+    const { id } = req.params; // Target User ID
+    const { skillId, message } = req.body;
+    const userId = req.user.id; // Current User ID
+
+    if (!skillId) {
+        res.status(400);
+        throw new Error('Skill ID is required');
+    }
+
+    await profileService.requestSkill(id, userId, { skillId, message });
+
+    res.status(200).json({
+        success: true,
+        message: 'Skill requested successfully'
+    });
+});

@@ -283,3 +283,79 @@ exports.getProfileById = async (id, reviewSort = 'highest', currentUserId = null
         throw error;
     }
 };
+
+// Request a skill
+exports.requestSkill = async (targetUserId, currentUserId, { skillId, message }) => {
+    try {
+        const User = require("../models/User");
+        const mongoose = require("mongoose");
+
+        if (targetUserId === currentUserId) {
+            const error = new Error('You cannot request a skill from yourself');
+            error.statusCode = 400;
+            throw error;
+        }
+
+        const targetUser = await User.findById(targetUserId);
+        const currentUser = await User.findById(currentUserId);
+
+        if (!targetUser) {
+            const error = new Error('User not found');
+            error.statusCode = 404;
+            throw error;
+        }
+
+        // Check for duplicate pending requests
+        const existingRequest = targetUser.requestsReceived.find(
+            (req) =>
+                req.user &&
+                req.user.toString() === currentUserId.toString() &&
+                req.skill &&
+                req.skill.toString() === skillId.toString() &&
+                req.status.status === 'pending'
+        );
+
+        if (existingRequest) {
+            const error = new Error('You already have a pending request for this skill');
+            error.statusCode = 400;
+            throw error;
+        }
+
+
+
+        // Generate a shared ID for syncing
+        const requestId = new mongoose.Types.ObjectId();
+
+        // Incoming request for target: user = sender
+        const requestForTarget = {
+            _id: requestId,
+            user: currentUserId,
+            skill: skillId,
+            message: message,
+            status: { status: 'pending', message: '' },
+            seen: false,
+            createdAt: new Date()
+        };
+
+        // Outgoing request for sender: user = target
+        const requestForSender = {
+            _id: requestId,
+            user: targetUserId,
+            skill: skillId,
+            message: message,
+            status: { status: 'pending', message: '' },
+            seen: true,
+            createdAt: new Date()
+        };
+
+        targetUser.requestsReceived.push(requestForTarget);
+        currentUser.requestsSent.push(requestForSender);
+
+        await targetUser.save();
+        await currentUser.save();
+
+        return true;
+    } catch (error) {
+        throw error;
+    }
+};

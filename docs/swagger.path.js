@@ -1,5 +1,33 @@
 /**
  * @swagger
+ * /:
+ *   get:
+ *     summary: API Resources
+ *     description: Get available API resources and version information
+ *     tags: [General]
+ *     responses:
+ *       200:
+ *         description: API Resources
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success: { type: boolean, example: true }
+ *                 message: { type: string, example: 'API Resources' }
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     version: { type: string, example: 'v1' }
+ *                     resources:
+ *                       type: object
+ *                       properties:
+ *                         auth: { type: string, example: '/api/auth' }
+ *                         profiles: { type: string, example: '/api/profiles' }
+ */
+
+/**
+ * @swagger
  * /auth/signup:
  *   post:
  *     summary: Register a new user
@@ -309,8 +337,10 @@
  *           application/json:
  *             schema: { $ref: '#/components/schemas/Error' }
  *             examples:
+ *               ValidationError:
+ *                 value: { success: false, error: { code: 'VALIDATION_ERROR', message: 'Email is required' } }
  *               EmailExists:
- *                 value: { success: false, error: { code: 'EMAIL_EXISTS', message: 'Email already registered' } }
+ *                 value: { success: false, error: { code: 'EMAIL_EXISTS', message: 'This Email is already in use' } }
  *       401:
  *         description: Unauthorized
  *         content:
@@ -540,7 +570,137 @@
 
 /**
  * @swagger
- * /profiles/:
+ * /auth/requests/seen:
+ *   post:
+ *     summary: Mark requests as seen
+ *     tags: [Auth]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [type]
+ *             properties:
+ *               type: { type: string, enum: [incoming, my] }
+ *     responses:
+ *       200:
+ *         description: Requests marked as seen
+ *         content:
+ *           application/json:
+ *             schema:
+ *               allOf:
+ *                 - $ref: '#/components/schemas/Success'
+ *                 - type: object
+ *                   properties:
+ *                     message: { type: string, example: 'Requests marked as seen' }
+ *             example:
+ *               success: true
+ *               message: 'Requests marked as seen'
+ *       401:
+ *         description: Unauthorized
+ *         content:
+ *           application/json:
+ *             schema: { $ref: '#/components/schemas/Error' }
+ */
+
+/**
+ * @swagger
+ * /auth/requests/{requestId}:
+ *   post:
+ *     summary: Update request status
+ *     tags: [Auth]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: requestId
+ *         required: true
+ *         schema: { type: string }
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [status]
+ *             properties:
+ *               status: { type: string, enum: [accepted, declined] }
+ *               message: { type: string }
+ *     responses:
+ *       200:
+ *         description: Request status updated
+ *         content:
+ *           application/json:
+ *             schema:
+ *               allOf:
+ *                 - $ref: '#/components/schemas/Success'
+ *                 - type: object
+ *                   properties:
+ *                     message: { type: string, example: 'Request accepted successfully' }
+ *       401:
+ *         description: Unauthorized
+ *         content:
+ *           application/json:
+ *             schema: { $ref: '#/components/schemas/Error' }
+ *   delete:
+ *     summary: Delete or Unsend request
+ *     tags: [Auth]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: requestId
+ *         required: true
+ *         schema: { type: string }
+ *       - in: query
+ *         name: action
+ *         required: true
+ *         schema: { type: string, enum: [unsend, delete] }
+ *         description: Action to perform (unsend for pending, delete for history)
+ *     responses:
+ *       200:
+ *         description: Request deleted/unsent
+ *         content:
+ *           application/json:
+ *             schema:
+ *               allOf:
+ *                 - $ref: '#/components/schemas/Success'
+ *                 - type: object
+ *                   properties:
+ *                     message: { type: string, example: 'Request unsent successfully' }
+ *       400:
+ *         description: Validation Error
+ *         content:
+ *           application/json:
+ *             schema: { $ref: '#/components/schemas/Error' }
+ *             examples:
+ *               ValidationError:
+ *                 value: { success: false, error: { code: 'VALIDATION_ERROR', message: 'Action query parameter is required' } }
+ *               InvalidAction:
+ *                 value: { success: false, error: { code: 'INVALID_ACTION', message: 'Invalid action' } }
+ *               RequestNotFound:
+ *                 value: { success: false, error: { code: 'REQUEST_NOT_FOUND', message: 'Request not found' } }
+ *               Unauthorized:
+ *                 value: { success: false, error: { code: 'UNAUTHORIZED', message: 'You are not authorized' } }
+ *               CannotUnsend:
+ *                 value: { success: false, error: { code: 'CANNOT_UNSEND', message: 'Cannot unsend processed request' } }
+ *               CannotDelete:
+ *                 value: { success: false, error: { code: 'CANNOT_DELETE', message: 'Cannot delete pending request' } }
+ *       410:
+ *         description: Gone (Previously 401 typo? 410 is clearer but stick to 400 for errors usually or 404. api_reference said 400.)
+ *       401:
+ *         description: Unauthorized
+ *         content:
+ *           application/json:
+ *             schema: { $ref: '#/components/schemas/Error' }
+ */
+
+/**
+ * @swagger
+ * /profiles:
  *   get:
  *     summary: Get recommended profiles with pagination
  *     description: |
@@ -876,44 +1036,6 @@
  * @swagger
  * /profiles/{id}:
  *   get:
- *     summary: Get single profile by ID
- *     description: Retrieve a user's profile information by their unique ID.
- *     tags: [Profiles]
- *     parameters:
- *       - in: path
- *         name: id
- *         required: true
- *         schema:
- *           type: string
- *         description: User ID
- *     security:
- *       - bearerAuth: []
- *       - {}
- *     responses:
- *       200:
- *         description: Profile retrieved successfully
- *         content:
- *           application/json:
- *             schema:
- *               allOf:
- *                 - $ref: '#/components/schemas/Success'
- *                 - type: object
- *                   properties:
- *                     data:
- *                       $ref: '#/components/schemas/Profile'
- *       404:
- *         description: Profile not found
- *         content:
- *           application/json:
- *             schema: { $ref: '#/components/schemas/Error' }
- *             examples:
- *               UserNotFound:
- *                 value: { success: false, error: { code: 'USER_NOT_FOUND', message: 'Profile not found' } }
- */
-/**
- * @swagger
- * /profiles/{id}:
- *   get:
  *     summary: Get profile by ID
  *     tags: [Profiles]
  *     parameters:
@@ -1045,4 +1167,63 @@
  *                 value: { success: false, error: { code: 'USER_NOT_FOUND', message: 'Profile not found' } }
  *               ReviewNotFound:
  *                 value: { success: false, error: { code: 'REVIEW_NOT_FOUND', message: 'Review not found' } }
+ */
+
+/**
+ * @swagger
+ * /profiles/{id}/request:
+ *   post:
+ *     summary: Request a skill
+ *     tags: [Profiles]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema: { type: string }
+ *         description: User ID to request skill from
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [skillId]
+ *             properties:
+ *               skillId: { type: string }
+ *               message: { type: string }
+ *     responses:
+ *       200:
+ *         description: Skill request sent
+ *         content:
+ *           application/json:
+ *             schema:
+ *               allOf:
+ *                 - $ref: '#/components/schemas/Success'
+ *                 - type: object
+ *                   properties:
+ *                     message: { type: string, example: 'Skill request sent successfully' }
+ *       400:
+ *         description: Validation Error
+ *         content:
+ *           application/json:
+ *             schema: { $ref: '#/components/schemas/Error' }
+ *             examples:
+ *               ValidationError:
+ *                 value: { success: false, error: { code: 'VALIDATION_ERROR', message: 'Skill ID is required' } }
+ *               SelfRequest:
+ *                 value: { success: false, error: { code: 'SELF_REQUEST', message: 'You cannot request a skill from yourself' } }
+ *               RequestExists:
+ *                 value: { success: false, error: { code: 'REQUEST_EXISTS', message: 'Request already sent' } }
+ *       404:
+ *         description: Not Found
+ *         content:
+ *           application/json:
+ *             schema: { $ref: '#/components/schemas/Error' }
+ *             examples:
+ *               UserNotFound:
+ *                 value: { success: false, error: { code: 'USER_NOT_FOUND', message: 'User not found' } }
+ *               SkillNotFound:
+ *                 value: { success: false, error: { code: 'SKILL_NOT_FOUND', message: 'Skill not found' } }
  */

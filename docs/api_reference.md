@@ -1397,6 +1397,84 @@ Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
 | `pagination.total` | integer | Total number of profiles matching the search criteria |
 | `pagination.totalPages` | integer | Total number of pages |
 
+### 10. Mark Requests as Seen
+Mark all incoming or sent requests as seen by the user. This clears the "new" status notification.
+
+- **URL**: `/auth/requests/seen`
+- **Method**: `POST`
+- **Auth Required**: Yes (Bearer Token)
+- **Content-Type**: `application/json`
+
+#### Request Body Parameters
+| Field | Type | Required | Description |
+| :--- | :--- | :--- | :--- |
+| `type` | String | Yes | Type of requests to mark as seen. Values: `incoming`, `my`. |
+
+#### Success Response (200 OK)
+```json
+{
+  "success": true,
+  "message": "Requests marked as seen"
+}
+```
+
+### 11. Update Request Status
+Accept or decline a skill swap request.
+
+- **URL**: `/auth/requests/:requestId`
+- **Method**: `POST`
+- **Auth Required**: Yes (Bearer Token)
+- **Content-Type**: `application/json`
+
+#### Request Body Parameters
+| Field | Type | Required | Description |
+| :--- | :--- | :--- | :--- |
+| `status` | String | Yes | New status. Values: `accepted`, `declined`. |
+| `message` | String | No | Optional message to the requester. |
+
+#### Success Response (200 OK)
+```json
+{
+  "success": true,
+  "message": "Request accepted successfully"
+}
+```
+
+### 12. Delete or Unsend Request
+Unsend a pending request or delete a processed request (accepted/declined) from your history.
+
+- **URL**: `/auth/requests/:requestId`
+- **Method**: `DELETE`
+- **Auth Required**: Yes (Bearer Token)
+- **Query Parameters**:
+    - `action`: `unsend` (for pending requests) or `delete` (for history).
+
+#### Query Parameters
+| Field | Type | Required | Description |
+| :--- | :--- | :--- | :--- |
+| `action` | String | Yes | Action to perform: `unsend` or `delete`. |
+
+#### Success Response (200 OK)
+```json
+{
+  "success": true,
+  "message": "Request unsent successfully"
+}
+```
+
+#### Error Responses
+**400 Bad Request**
+| Error Code | Message | Description |
+| :--- | :--- | :--- |
+| `VALIDATION_ERROR` | "Action query parameter is required" | Missing `action` query param. |
+| `INVALID_ACTION` | "Invalid action" | Action must be `unsend` or `delete`. |
+| `REQUEST_NOT_FOUND` | "Request not found" | Request ID is invalid. |
+| `UNAUTHORIZED` | "You are not authorized" | Request does not belong to you. |
+| `CANNOT_UNSEND` | "Cannot unsend processed request" | Tried to unsend a request that is already accepted/declined. |
+| `CANNOT_DELETE` | "Cannot delete pending request" | Tried to delete a pending request (use unsend). |
+
+---
+
 ### Notes
 
 - Profiles are sorted by skill priority first (skills offered before skills needed)
@@ -1598,3 +1676,53 @@ Returns a success message.
 | :--- | :--- | :--- |
 | `USER_NOT_FOUND` | "Profile not found" | Target user does not exist. |
 | `REVIEW_NOT_FOUND` | "Review not found" | You have not reviewed this user. |
+
+---
+
+### 15. Request Skill
+Send a skill swap request to a user.
+
+- **URL**: `/profiles/:id/request`
+- **Method**: `POST`
+- **Auth Required**: Yes (Bearer Token)
+- **Content-Type**: `application/json`
+
+#### Request Body Parameters
+| Field | Type | Required | Description |
+| :--- | :--- | :--- | :--- |
+| `message` | String | No | Optional message to the user. |
+| `skillId` | String | Yes | ID of the skill being requested. |
+| `demoRequestId` | String | No | Optional ID for demo purposes. |
+
+#### Request Example
+```json
+{
+  "skillId": "60d0fe4f5311236168a109cc",
+  "message": "I'd love to learn from you!"
+}
+```
+
+#### Success Response (200 OK)
+Returns a success message.
+
+```json
+{
+  "success": true,
+  "message": "Skill request sent successfully"
+}
+```
+
+#### Error Responses
+**400 Bad Request**
+| Error Code | Message | Description |
+| :--- | :--- | :--- |
+| `VALIDATION_ERROR` | "Skill ID is required" | Missing skillId. |
+| `SELF_REQUEST` | "You cannot request a skill from yourself" | User tried to request from themselves. |
+| `REQUEST_EXISTS` | "Request already sent" | A pending request already exists. |
+
+**404 Not Found**
+| Error Code | Message | Description |
+| :--- | :--- | :--- |
+| `USER_NOT_FOUND` | "User not found" | Target user does not exist. |
+| `SKILL_NOT_FOUND` | "Skill not found" | Skill ID is invalid or user does not offer this skill. |
+

@@ -55,4 +55,19 @@ router.post("/update-contact", authenticate, authController.updateContact);
 router.post("/update-avatar", authenticate, upload.single('avatar'), authController.updateAvatar);
 
 
+// @route   POST /api/auth/requests/seen
+// @desc    Mark requests as seen
+// @access  Private
+router.post("/requests/seen", authenticate, authController.markRequestsSeen);
+
+// @route   POST /api/auth/requests/:requestId
+// @desc    Update Request Status (Accept/Decline)
+// @access  Private
+router.post("/requests/:requestId", authenticate, authController.updateRequestStatus);
+
+// @route   DELETE /api/auth/requests/:requestId
+// @desc    Delete or Unsend Request
+// @access  Private
+router.delete("/requests/:requestId", authenticate, authController.deleteRequest);
+
 module.exports = router;

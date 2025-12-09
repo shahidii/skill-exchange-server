@@ -2,9 +2,13 @@ const mongoose = require("mongoose");
 
 const requestSchema = new mongoose.Schema({
   user: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
-  skill: { type: mongoose.Schema.Types.ObjectId, ref: "Skill", required: true },
-  status: { status: { type: String, enum: ["pending", "accepted", "declined"], default: "pending" }, message: { type: String, trim: true } },
-  message: { type: String, trim: true },
+  skill: { type: mongoose.Schema.Types.ObjectId, ref: "Skill", required: true }, // The skill being requested
+  status: {
+    status: { type: String, enum: ["pending", "accepted", "declined"], default: "pending" },
+    message: { type: String, trim: true } // Reply message when accepting/declining
+  },
+  message: { type: String, trim: true }, // Initial request message
+  seen: { type: Boolean, default: false },
   createdAt: { type: Date, default: Date.now },
 });
 
