@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const authRoutes = require('./auth.routes');
 const profileRoutes = require('./profile.routes');
+const aiRoutes = require('./ai.routes');
 const swaggerUi = require('swagger-ui-express');
 const swaggerSpecs = require('../config/swagger');
 
@@ -25,5 +26,6 @@ router.get('/', (req, res) => {
 
 router.use('/auth', authRoutes);
 router.use('/profiles', profileRoutes);
+router.use('/ai', aiRoutes);
 
 module.exports = router;
