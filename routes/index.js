@@ -19,6 +19,7 @@ router.get('/', (req, res) => {
             resources: {
                 auth: "/api/auth",
                 profiles: "/api/profiles",
+                ai: "/api/ai"
             }
         }
     });

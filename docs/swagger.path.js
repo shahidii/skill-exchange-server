@@ -24,6 +24,7 @@
  *                       properties:
  *                         auth: { type: string, example: '/api/auth' }
  *                         profiles: { type: string, example: '/api/profiles' }
+ *                         ai: { type: string, example: '/api/ai' }
  */
 
 /**
@@ -1226,4 +1227,56 @@
  *                 value: { success: false, error: { code: 'USER_NOT_FOUND', message: 'User not found' } }
  *               SkillNotFound:
  *                 value: { success: false, error: { code: 'SKILL_NOT_FOUND', message: 'Skill not found' } }
+ */
+
+/**
+ * @swagger
+ * /ai/chat:
+ *   post:
+ *     summary: Chat with AI Learning Assistant
+ *     description: |
+ *       Interact with the SkillSwap AI Assistant to get learning guidance, search for users, and learn about the platform.
+ *       The assistant uses sophisticated function calling (tools) to search your database in real-time.
+ *     tags: [AI]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [message]
+ *             properties:
+ *               message: { type: string, example: 'Who can teach me React?' }
+ *               history:
+ *                 type: array
+ *                 items:
+ *                   type: object
+ *                   properties:
+ *                     role: { type: string, enum: [user, assistant] }
+ *                     content: { type: string }
+ *     responses:
+ *       200:
+ *         description: AI Response retrieved
+ *         content:
+ *           application/json:
+ *             schema:
+ *               allOf:
+ *                 - $ref: '#/components/schemas/Success'
+ *                 - type: object
+ *                   properties:
+ *                     message: { type: string, example: 'I found several experts who can help you with React! For example, Muhammed Shahid is a lead developer...' }
+ *       400:
+ *         description: Validation Error
+ *         content:
+ *           application/json:
+ *             schema: { $ref: '#/components/schemas/Error' }
+ *             example:
+ *               value: { success: false, message: 'Message is required' }
+ *       401:
+ *         description: Unauthorized
+ *         content:
+ *           application/json:
+ *             schema: { $ref: '#/components/schemas/Error' }
  */

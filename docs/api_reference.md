@@ -1726,3 +1726,57 @@ Returns a success message.
 | `USER_NOT_FOUND` | "User not found" | Target user does not exist. |
 | `SKILL_NOT_FOUND` | "Skill not found" | Skill ID is invalid or user does not offer this skill. |
 
+---
+
+### 16. Chat with AI
+Interact with the SkillSwap AI Assistant to get learning guidance and search for users.
+
+- **URL**: `/ai/chat`
+- **Method**: `POST`
+- **Auth Required**: Yes (Bearer Token)
+- **Content-Type**: `application/json`
+
+#### Request Body Parameters
+| Field | Type | Required | Description |
+| :--- | :--- | :--- | :--- |
+| `message` | String | Yes | The user's query/message to the AI. |
+| `history` | Array<Object> | No | Optional chat history for context. |
+
+**History Object Structure:**
+```json
+{
+  "role": "user", // or "assistant"
+  "content": "the message content"
+}
+```
+
+#### Request Example
+```json
+{
+  "message": "Who can teach me React?",
+  "history": []
+}
+```
+
+#### Success Response (200 OK)
+Returns the assistant's response.
+
+```json
+{
+  "success": true,
+  "message": "I found several experts who can help you with React! For example, Muhammed Shahid is a lead developer who believes in accessible education and offers React as a skill. You can find his profile in the search results."
+}
+```
+
+#### Error Responses
+**400 Bad Request**
+| Error Code | Message | Description |
+| :--- | :--- | :--- |
+| - | "Message is required" | Body missing the `message` field. |
+
+**401 Unauthorized**
+| Error Code | Message | Description |
+| :--- | :--- | :--- |
+| `NO_TOKEN` | "No token provided" | Missing Authorization header. |
+| `INVALID_TOKEN` | "Session expired. Please log in again." | Invalid or expired JWT. |
+
