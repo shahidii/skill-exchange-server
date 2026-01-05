@@ -47,7 +47,7 @@ exports.chat = async (message) => {
             - You can output multiple cards one after another or interspersed with text.
 
             Key Facts:
-            - Founder: Anonymous(Muhammed Shahid) - who does not want to be revealed (A visionary developer who believes in accessible education for all).
+            - Founder: Muhammed Shahid (A visionary developer who believes in accessible education for all).
             - Mission: To create a world where skills are a shared resource.
             - Vision: Connecting learners globally to swap expertise freely.
 

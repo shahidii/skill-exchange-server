@@ -100,8 +100,8 @@ async function searchUsers(skillName) {
 
 function getFounderInfo() {
     return {
-        // name: "Muhammed Shahid",
-        name: "Anonymous - who does not want to be revealed",
+        name: "Muhammed Shahid",
+        // name: "Anonymous - who does not want to be revealed",
         role: "Founder & Lead Developer",
         vision: "To build a platform where knowledge is accessible to everyone, across different skill levels and backgrounds.",
         background: "A passionate software engineer with a knack for building scalable web applications and AI integration."
