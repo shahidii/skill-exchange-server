@@ -12,19 +12,26 @@ const app = express();
 connectDB();
 
 // Middleware setup
-app.use(cors({
-    origin: (origin, callback) => {
-        const allowedOrigins = process.env.ALLOWED_ORIGINS ? process.env.ALLOWED_ORIGINS.split(',') : [];
-        // Allow requests with no origin (like mobile apps or curl requests)
-        if (!origin) return callback(null, true);
-        if (allowedOrigins.indexOf(origin) !== -1) {
-            callback(null, true);
-        } else {
-            callback(new Error('Not allowed by CORS'));
-        }
-    },
-    credentials: true
-}));
+const allowedOrigins = process.env.ALLOWED_ORIGINS
+    ?.split(",")
+    .map(origin => origin.trim());
+
+app.use(
+    cors({
+        origin(origin, callback) {
+            // allow server-to-server, curl, Postman
+            if (!origin) {
+                return callback(null, true);
+            }
+            if (allowedOrigins.includes(origin)) {
+                return callback(null, true);
+            }
+            callback(new Error("Not allowed by CORS"));
+        },
+        credentials: true,
+    })
+);
+
 app.use(express.json()); // Parse JSON bodies
 app.use(httpLogger); // Log HTTP requests
 app.use('/uploads', express.static(path.join(__dirname, '../uploads'))); // Serve static files from uploads directory
