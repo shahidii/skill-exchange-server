@@ -1,73 +1,116 @@
-# SkillSwap Platform Server
+# Skill-Swap API
 
-## Project Overview
-The SkillSwap Platform is a backend API designed to facilitate skill sharing between users. It allows users to register, log in, and manage their skills by specifying the skills they have and those they need.
+The backend RESTful API for the Skill Exchange Platform. Built with **Node.js** and **Express**, this service handles user authentication, data management, and integration with third-party services like OpenAI and Cloudinary.
 
-## Features
-- **Authentication**: Secure user registration and login using JWT tokens.
-- **Skill Management**: Users can add skills they have and request skills they need.
-- **MongoDB & Mongoose**: Data storage using MongoDB with Mongoose schema validation for data integrity.
+## 🚀 Features
 
-## Tech Stack
-- **Node.js**
-- **Express.js** - Web framework
-- **Mongoose** - ODM (Object Data Modeling) for MongoDB
-- **JWT Authentication** - For secure user management
-- **bcrypt** - Password hashing
-- **Pino** - Structured logging
-- **CORS** - Cross-Origin Resource Sharing
+- **Robust Authentication**: Secure User Signup, Login, Password Reset, and Email Verification using **JWT** and **Bcrypt**.
+- **Profile Management**: CRUD operations for user profiles, including avatar uploads via **Cloudinary**.
+- **Skill Ecosystem**: Manage skills offered and skills needed to facilitate accurate matching.
+- **Request System**: Comprehensive logic for sending, tracking, accepting, and declining skill exchange requests.
+- **AI Integration**: Routes to interact with **OpenAI** for platform intelligence and chat features.
+- **Security**: Implemented Helmet (security headers), CORS, and Rate Limiting.
+- **Logging**: Structured logging with **Pino**.
+- **Documentation**: Auto-generated API docs via **Swagger UI**.
 
-## Project Structure
-The project follows a clean architecture with separate modules for:
-- **Controllers**: Handling API endpoints
-- **Services**: Business logic implementation
-- **Repositories**: Data access layer
-- **Models**: Database schema definitions
+## 🛠️ Tech Stack
 
-## Installation Guide
-1. **Clone the repository:**
-   ```bash
-   git clone https://github.com/shahidii/skill-exchange-server.git
-   ```
+- **Runtime**: [Node.js](https://nodejs.org/)
+- **Framework**: [Express.js](https://expressjs.com/)
+- **Database**: [MongoDB](https://www.mongodb.com/) (with [Mongoose](https://mongoosejs.com/) ODM)
+- **Authentication**: `jsonwebtoken` (JWT), `bcrypt`
+- **File Storage**: [Cloudinary](https://cloudinary.com/)
+- **AI Service**: [OpenAI API](https://openai.com/)
+- **Email Service**: [Nodemailer](https://nodemailer.com/)
+- **Logging**: `pino`, `pino-http`
+- **Documentation**: `swagger-ui-express`, `swagger-jsdoc`
 
-2. **Navigate to the project directory:**
-   ```bash
-   cd skill-exchange-server
-   ```
+## 📂 Project Structure
 
-3. **Install dependencies:**
-   ```bash
-   pnpm install
-   ```
+```bash
+server/
+├── config/             # Database, Cloudinary, Swagger, and Logger config
+├── controllers/        # Request handlers (Auth, Profile, AI)
+├── middleware/         # Custom middleware (Auth check, Error handling, Multer)
+├── models/             # Mongoose schemas (User, Skill)
+├── routes/             # API Route definitions
+├── services/           # Business logic isolation
+├── utils/              # Helper functions
+├── src/                # Entry point (server.js, app.js)
+└── .env                # Environment variables
+```
 
-## Usage Instructions
-1. **Start the server:**
-   - Development mode:
-     ```bash
-     npm run dev
-     ```
-   - Production mode:
-     ```bash
-     npm run start
-     ```
+## ⚡ Getting Started
 
-2. **API Endpoints:**
-   - Sign up: `/api/auth/signup`
-   - Login: `/api/auth/login`
+### Prerequisites
 
-3. **Environment Variables:**
-   - `NODE_ENV`: `production` or `development`
-   - `PORT`: Server port (default: 5000)
+- **Node.js** (v18+ recommended)
+- **MongoDB** (Local instance or Atlas URI)
+- **pnpm** (preferred) or npm
 
-## API Documentation
-- Visit the [Swagger documentation](http://localhost:5000/api-docs) for detailed API endpoints and usage examples.
+### Installation
 
-## Contributing Guidelines
-1. Fork the repository.
-2. Create a new branch: `git checkout -b feature/new-feature`
-3. Commit your changes: `git commit -m "Your descriptive commit message"`
-4. Push to the branch: `git push origin feature/new-feature`
-5. Open a pull request and describe your changes.
+1.  **Clone the repository** (if not done partly):
+    ```bash
+    git clone <repository_url>
+    cd server
+    ```
 
-## License & Author Information
-The SkillSwap Platform is licensed under the ISC license. The project was created by [Muhammed Shahid](https://github.com/shahidii).
+2.  **Install dependencies**:
+    ```bash
+    pnpm install
+    ```
+
+3.  **Environment Setup**:
+    Create a `.env` file in the root directory with the following variables:
+
+    ```env
+    # Server
+    PORT=5000
+    NODE_ENV=development
+
+    # Database
+    MONGO_URI=mongodb://localhost:27017/skill-swap
+
+    # Security
+    JWT_SECRET=your_super_secret_jwt_key
+    JWT_EXPIRE=30d
+
+    # Cloudinary (for Image Uploads)
+    CLOUDINARY_CLOUD_NAME=your_cloud_name
+    CLOUDINARY_API_KEY=your_api_key
+    CLOUDINARY_API_SECRET=your_api_secret
+
+    # Email (Nodemailer)
+    EMAIL_SERVICE=gmail
+    EMAIL_USER=your_email@gmail.com
+    EMAIL_PASS=your_email_password
+
+    # OpenAI (for AI Chat)
+    OPENAI_API_KEY=your_openai_api_key
+    ```
+
+4.  **Run Server**:
+    - **Development** (with watch mode):
+      ```bash
+      pnpm dev
+      ```
+    - **Production**:
+      ```bash
+      pnpm start
+      ```
+
+    The server will run on `http://localhost:5000`.
+
+## 📖 API Documentation
+
+The API comes with built-in Swagger documentation.
+
+- Start the server.
+- Visit: **[http://localhost:5000/docs](http://localhost:5000/docs)** to view the interactive API playground.
+
+## 🧪 Key Endpoints
+
+- **Auth**: `/api/auth/signup`, `/api/auth/login`, `/api/auth/verify-otp`
+- **Profile**: `/api/profiles/me`, `/api/profiles/update`, `/api/profiles/requests`
+- **AI**: `/api/ai/chat` (if implemented)
