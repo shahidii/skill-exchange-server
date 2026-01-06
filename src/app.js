@@ -13,7 +13,17 @@ connectDB();
 
 // Middleware setup
 app.use(cors({
-    origin: "https://skill-swap-web-taupe.vercel.app"
+    origin: (origin, callback) => {
+        const allowedOrigins = process.env.ALLOWED_ORIGINS ? process.env.ALLOWED_ORIGINS.split(',') : [];
+        // Allow requests with no origin (like mobile apps or curl requests)
+        if (!origin) return callback(null, true);
+        if (allowedOrigins.indexOf(origin) !== -1) {
+            callback(null, true);
+        } else {
+            callback(new Error('Not allowed by CORS'));
+        }
+    },
+    credentials: true
 }));
 app.use(express.json()); // Parse JSON bodies
 app.use(httpLogger); // Log HTTP requests
