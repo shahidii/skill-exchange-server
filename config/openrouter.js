@@ -14,6 +14,11 @@ try {
     openai = new OpenAI({
         baseURL: "https://openrouter.ai/api/v1",
         apiKey: apiKey,
+        headers: {
+            "User-Agent": "SkillSwap/1.0.0",
+            "HTTP-Referer": "https://skill-swap-web-taupe.vercel.app",
+            "X-Title": "Skill Swap"
+        }
     });
 } catch (error) {
     throw error;

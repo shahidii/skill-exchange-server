@@ -12,7 +12,9 @@ const app = express();
 connectDB();
 
 // Middleware setup
-app.use(cors()); // Enable Cross-Origin Resource Sharing
+app.use(cors({
+    origin: "https://skill-swap-web-taupe.vercel.app"
+}));
 app.use(express.json()); // Parse JSON bodies
 app.use(httpLogger); // Log HTTP requests
 app.use('/uploads', express.static(path.join(__dirname, '../uploads'))); // Serve static files from uploads directory
